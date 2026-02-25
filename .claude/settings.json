@@ -1,0 +1,89 @@
+{
+  "hooks": {
+    "SessionStart": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "ROOT=$(git rev-parse --show-toplevel 2>/dev/null || echo \"$PROJECT_DIR\") && cd \"$ROOT/_code\" && uv run python scripts/hooks/session_orient.py"
+          }
+        ]
+      },
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "ROOT=$(git rev-parse --show-toplevel 2>/dev/null || echo \"$PROJECT_DIR\") && bash \"$ROOT/.claude/hooks/session-orient.sh\""
+          }
+        ]
+      }
+    ],
+    "PostToolUse": [
+      {
+        "matcher": "Write",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "ROOT=$(git rev-parse --show-toplevel 2>/dev/null || echo \"$PROJECT_DIR\") && bash \"$ROOT/.claude/hooks/pipeline-bridge.sh\""
+          }
+        ]
+      },
+      {
+        "matcher": "Write|Edit",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "ROOT=$(git rev-parse --show-toplevel 2>/dev/null || echo \"$PROJECT_DIR\") && cd \"$ROOT/_code\" && uv run python scripts/hooks/validate_write.py"
+          }
+        ]
+      },
+      {
+        "matcher": "Write|Edit",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "ROOT=$(git rev-parse --show-toplevel 2>/dev/null || echo \"$PROJECT_DIR\") && bash \"$ROOT/.claude/hooks/validate-note.sh\""
+          }
+        ]
+      },
+      {
+        "matcher": "Write|Edit",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "ROOT=$(git rev-parse --show-toplevel 2>/dev/null || echo \"$PROJECT_DIR\") && cd \"$ROOT/_code\" && uv run python scripts/hooks/auto_commit.py",
+            "timeout": 10
+          }
+        ]
+      },
+      {
+        "matcher": "Write|Edit",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "ROOT=$(git rev-parse --show-toplevel 2>/dev/null || echo \"$PROJECT_DIR\") && bash \"$ROOT/.claude/hooks/auto-commit.sh\"",
+            "timeout": 10
+          }
+        ]
+      }
+    ],
+    "Stop": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "ROOT=$(git rev-parse --show-toplevel 2>/dev/null || echo \"${PROJECT_DIR:-/Users/andreschousal/Projects/EngramR}\") && cd \"$ROOT/_code\" && uv run python scripts/hooks/session_capture.py"
+          }
+        ]
+      },
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "ROOT=$(git rev-parse --show-toplevel 2>/dev/null || echo \"${PROJECT_DIR:-/Users/andreschousal/Projects/EngramR}\") && bash \"$ROOT/.claude/hooks/session-capture.sh\""
+          }
+        ]
+      }
+    ]
+  }
+}

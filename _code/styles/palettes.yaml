@@ -1,0 +1,66 @@
+# Canonical color palettes for all research projects.
+#
+# Single source of truth: both Python (plot_theme.py) and R (palettes.R) load
+# this file. Adding a new lab requires only adding an entry below.
+#
+# Palette names are lowercase lab slugs. Each value is a list of 8 hex colors.
+# Semantic palettes (sex, dx, etc.) are shared across all labs.
+
+# -- Semantic palettes (universal, all labs) -----------------------------------
+
+semantic:
+  sex:
+    Male: "#377EB8"
+    Female: "#E41A1C"
+  dx:
+    "P-": "#4DAF4A"
+    "P+": "#E41A1C"
+  binary:
+    Control: "#4DAF4A"
+    Case: "#E41A1C"
+  direction:
+    Up: "#E41A1C"
+    Down: "#377EB8"
+    NS: "#999999"
+  sig:
+    sig: "#E41A1C"
+    "not sig": "#999999"
+
+# -- Diverging and sequential palette names ------------------------------------
+
+diverging: "RdBu_r"
+sequential: "Blues"
+
+# -- Lab-specific categorical palettes -----------------------------------------
+# Each lab gets up to 8 hex colors for categorical variables.
+# "elahi" uses ColorBrewer Set1. "chipuk" uses Okabe-Ito.
+# New labs: add an entry here and both Python and R pick it up automatically.
+
+labs:
+  elahi:
+    - "#E41A1C"
+    - "#377EB8"
+    - "#4DAF4A"
+    - "#984EA3"
+    - "#FF7F00"
+    - "#A65628"
+    - "#F781BF"
+    - "#999999"
+  chipuk:
+    - "#E69F00"
+    - "#56B4E9"
+    - "#009E73"
+    - "#F0E442"
+    - "#0072B2"
+    - "#D55E00"
+    - "#CC79A7"
+    - "#000000"
+  kuang:
+    - "#E41A1C"
+    - "#377EB8"
+    - "#4DAF4A"
+    - "#984EA3"
+    - "#FF7F00"
+    - "#A65628"
+    - "#F781BF"
+    - "#999999"

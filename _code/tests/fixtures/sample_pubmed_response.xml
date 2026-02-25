@@ -1,0 +1,40 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<PubmedArticleSet>
+  <PubmedArticle>
+    <MedlineCitation>
+      <PMID>12345678</PMID>
+      <Article>
+        <ArticleTitle>Plasma GFAP as a biomarker for Alzheimer disease</ArticleTitle>
+        <AuthorList>
+          <Author>
+            <LastName>Benedet</LastName>
+            <ForeName>Andrea L</ForeName>
+          </Author>
+          <Author>
+            <LastName>Mila-Aloma</LastName>
+            <ForeName>Marta</ForeName>
+          </Author>
+        </AuthorList>
+        <Journal>
+          <Title>Nature Medicine</Title>
+          <JournalIssue>
+            <PubDate>
+              <Year>2021</Year>
+            </PubDate>
+          </JournalIssue>
+        </Journal>
+        <Abstract>
+          <AbstractText Label="BACKGROUND">GFAP is a promising biomarker.</AbstractText>
+          <AbstractText Label="METHODS">We measured plasma GFAP in 300 participants.</AbstractText>
+          <AbstractText Label="RESULTS">GFAP was elevated in amyloid-positive individuals.</AbstractText>
+        </Abstract>
+      </Article>
+    </MedlineCitation>
+    <PubmedData>
+      <ArticleIdList>
+        <ArticleId IdType="doi">10.1038/s41591-021-01234-5</ArticleId>
+        <ArticleId IdType="pubmed">12345678</ArticleId>
+      </ArticleIdList>
+    </PubmedData>
+  </PubmedArticle>
+</PubmedArticleSet>
