@@ -946,7 +946,7 @@ class TestSelectTask:
                 qpr=5.0,
                 cmr=2.0,
                 hcr=50.0,
-                swr=1.0,
+                tpv=1.0,
                 alarm_keys=["qpr_critical"],
             ),
         )
@@ -971,7 +971,7 @@ class TestSelectTask:
                 qpr=5.0,
                 cmr=15.0,
                 hcr=10.0,
-                swr=1.0,
+                tpv=1.0,
                 alarm_keys=["qpr_critical", "cmr_hot"],
             ),
         )
@@ -995,8 +995,30 @@ class TestSelectTask:
                 qpr=1.0,
                 cmr=15.0,
                 hcr=50.0,
-                swr=1.0,
+                tpv=1.0,
                 alarm_keys=["cmr_hot"],
+            ),
+        )
+        task = select_task(state, default_config)
+        assert task.tier == 2
+
+    def test_metabolic_governor_tpv_stalled_suppresses_p1(self, default_config):
+        """TPV stalled alarm also suppresses generative P1."""
+        state = VaultState(
+            observation_count=15,
+            goals=[
+                GoalState(
+                    goal_id="goal-test-analysis",
+                    hypothesis_count=12,
+                    undermatched_count=5,
+                ),
+            ],
+            metabolic=MetabolicState(
+                qpr=1.0,
+                cmr=2.0,
+                tpv=0.0,
+                hcr=50.0,
+                alarm_keys=["tpv_stalled"],
             ),
         )
         task = select_task(state, default_config)
@@ -1275,7 +1297,7 @@ class TestBuildTier3Entries:
                 vdr=95.0,
                 cmr=19.0,
                 hcr=10.0,
-                swr=1.5,
+                tpv=1.5,
                 alarm_keys=["qpr_critical", "cmr_hot"],
             ),
         )
@@ -1293,7 +1315,7 @@ class TestBuildTier3Entries:
                 vdr=50.0,
                 cmr=2.0,
                 hcr=50.0,
-                swr=1.0,
+                tpv=1.0,
                 alarm_keys=[],
             ),
         )
@@ -1462,9 +1484,12 @@ class TestConfigLoading:
         assert cfg.metabolic.qpr_critical == 3.0
         assert cfg.metabolic.cmr_hot == 10.0
         assert cfg.metabolic.hcr_redirect == 15.0
-        assert cfg.metabolic.swr_archive == 5.0
+        assert cfg.metabolic.tpv_stalled == 0.1
+        assert cfg.metabolic.gcr_fragmented == 0.3
+        assert cfg.metabolic.ipr_overflow == 3.0
         assert cfg.metabolic.vdr_warn == 80.0
         assert cfg.metabolic.lookback_days == 7
+        assert cfg.metabolic.history_max_snapshots == 90
 
     def test_metabolic_config_from_yaml(self, tmp_path):
         p = tmp_path / "daemon-config.yaml"
@@ -2170,7 +2195,7 @@ class TestSelectTaskAudited:
                 vdr=80.0,
                 cmr=15.0,
                 hcr=10.0,
-                swr=1.0,
+                tpv=1.0,
                 alarm_keys=["qpr_critical"],
             ),
         )

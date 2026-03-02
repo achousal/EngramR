@@ -210,7 +210,7 @@ class TestClassifySignals:
     def test_metabolic_no_alarms_no_signals(self, clean_state, default_config):
         """No metabolic signals when no alarms."""
         clean_state.metabolic = MetabolicState(
-            qpr=1.0, cmr=2.0, hcr=50.0, swr=1.0, alarm_keys=[]
+            qpr=1.0, cmr=2.0, tpv=1.0, hcr=50.0, gcr=0.8, ipr=0.5, alarm_keys=[]
         )
         signals = classify_signals(clean_state, default_config)
         metabolic = [s for s in signals if s.name.startswith("metabolic_")]
@@ -503,18 +503,24 @@ class TestStateSummary:
         state = VaultState(
             metabolic=MetabolicState(
                 qpr=5.0,
-                vdr=95.0,
                 cmr=19.0,
+                tpv=0.5,
                 hcr=10.0,
-                swr=1.5,
+                gcr=0.7,
+                ipr=2.0,
+                vdr=95.0,
                 alarm_keys=["qpr_critical", "cmr_hot"],
             ),
         )
         summary = _build_state_summary(state)
         assert "metabolic" in summary
         assert summary["metabolic"]["qpr"] == 5.0
+        assert summary["metabolic"]["tpv"] == 0.5
+        assert summary["metabolic"]["gcr"] == 0.7
+        assert summary["metabolic"]["ipr"] == 2.0
         assert summary["metabolic"]["vdr"] == 95.0
         assert summary["metabolic"]["alarm_keys"] == ["qpr_critical", "cmr_hot"]
+        assert "swr" not in summary["metabolic"]
 
     def test_metabolic_none_not_in_summary(self):
         state = VaultState(metabolic=None)
