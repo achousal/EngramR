@@ -248,11 +248,33 @@ Ask: "Any connections I missed between labs?"
 
 If no other labs detected, skip this turn silently.
 
-### Turn 4: Strategy (optional)
+### Turn 4: Research Goals
 
-Ask: "Anything else I should know? Research directions not captured by these projects, upcoming datasets, or collaborations? (Skip if nothing.)"
+Auto-derive suggested research goals from the scan results: group projects by shared research themes, data types, or biological questions. Then present them as editable suggestions:
 
-If user provides additional context, incorporate into goal creation.
+```
+=== Research Goals ===
+
+Based on your projects, here are suggested research goals:
+
+{numbered list, each with:
+  - suggested goal title (prose, not a label)
+  - one-line scope
+  - linked projects from the scan}
+
+You can:
+- Approve these as-is
+- Edit a goal -- change its title, scope, or framing
+- Add a new goal -- describe a direction not captured here
+- Remove a goal -- if it does not fit your program
+- Merge goals -- if two suggestions are really one thread
+```
+
+Wait for user response. Apply all edits before proceeding to Phase 4.
+
+**Quality bar for suggestions:** Each goal should be specific enough to generate hypotheses from, but broad enough to span multiple projects. Prefer "vascular contributions to cognitive decline" over "vascular biology". Ground suggestions in the actual projects, data, and methods detected in the scan.
+
+**Follow-up:** After goal edits, ask once: "Anything else I should know? Upcoming datasets, collaborations, or directions not captured? (Skip if nothing.)" Incorporate any additional context into the goal files.
 
 ---
 
@@ -265,7 +287,7 @@ Ready to create:
 - projects/{lab}/{tag}.md (per NEW project)
 - projects/{lab}/_index.md (lab entity)
 - _dev/{tag} symlinks
-- _research/goals/{slug}.md (if new directions)
+- _research/goals/{slug}.md ({N} goals from your review)
 - projects/_index.md updates
 - _research/data-inventory.md entries
 - self/goals.md thread updates

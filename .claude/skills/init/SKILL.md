@@ -88,43 +88,65 @@ Wait for response.
 
 ---
 
-## Phase 1: GOAL + QUESTIONS (1-2 conversation turns)
+## Phase 1: GOAL + QUESTIONS (2-3 conversation turns)
 
-### Turn 1: Goal selection
+### Turn 1: Goal review and selection
 
-If a goal name was provided as argument, look it up and proceed.
+If a goal name was provided as argument, look it up and proceed to Turn 2.
 
-Otherwise, present available goals from the orient output:
+Otherwise, present available goals from the orient output as **suggestions the user owns**:
 
 ```
-Available research goals:
-{numbered list from _research/goals/}
+=== Research Goals ===
 
-Which goal(s) should I seed? You can select one, or type a new goal.
+These were created during onboarding. They are suggestions -- you own them.
+
+{numbered list, each with title and one-line scope from the goal file's Objective}
+
+You can:
+- Select a goal to seed (by number or name)
+- Edit a goal -- change its title, scope, or framing before seeding
+- Add a new goal -- describe a research direction not listed here
+- Remove a goal -- if it no longer fits your program
+
+Which goal would you like to work with first?
 ```
 
 Wait for user response.
+
+**If user edits a goal:** Apply changes to the goal file in `_research/goals/` and update `self/goals.md` before proceeding. Re-present the edited goal for confirmation.
+
+**If user adds a new goal:** Create a new goal file following `_code/templates/research-goal.md`, update `self/goals.md`, then proceed with seeding it.
+
+**If user removes a goal:** Confirm removal. Delete the goal file and remove its entry from `self/goals.md`.
 
 **Depth-first:** If user selects multiple goals, seed ONE first. After completion, suggest the rest for follow-up sessions.
 
 ### Turn 2: Core questions
 
-For the selected goal, ask:
+For the selected goal, generate 3-5 suggested core questions based on the goal's scope, linked projects, and any available vault context (data inventory, literature, project CLAUDE.md files). Then present them as editable suggestions:
 
 ```
 For the goal "{goal title}":
 
-What are the 3-5 core scientific questions this research program addresses?
+Here are suggested core questions based on your projects and scope:
 
-Each should be a question that, if answered, would substantially advance the goal.
+1. "{suggested question 1}"
+2. "{suggested question 2}"
+3. "{suggested question 3}"
+{4-5 if warranted}
 
-For example:
-- "Does X predict Y in population Z?"
-- "What mechanism explains the association between A and B?"
-- "Can method M detect signal S at clinically relevant thresholds?"
+You can:
+- Approve these as-is
+- Edit any question (by number)
+- Add your own questions
+- Remove questions that miss the mark
+- Replace all with your own
 ```
 
 Wait for user response. Parse into individual questions.
+
+**Quality bar for suggestions:** Each question should be specific enough to generate falsifiable hypotheses. Prefer "Does X predict Y in population Z?" over "What is the role of X?" Ground suggestions in the actual data and methods available in the linked projects.
 
 ---
 
@@ -132,29 +154,33 @@ Wait for user response. Parse into individual questions.
 
 The user's first generative act. Building one thing teaches more than reviewing thirty.
 
-### Turn 1: Compose together
+### Turn 1: Suggest and compose together
 
-Take the user's FIRST core question. Present:
+Take the user's FIRST core question. Generate a suggested claim from it -- transform the question into a propositional statement grounded in the goal's scope and available data. Then present:
 
 ```
-Let's turn your first question into a claim together.
+Let's turn your first question into a claim.
 
 Question: "{first core question}"
 
 A claim is a prose proposition -- a complete thought someone could agree or disagree with.
 Test: "This claim argues that [title]" must work as a sentence.
 
-Example:
-  Question: "Does X predict Y?"
-  Claim: "X predicts Y with clinically meaningful effect size in population Z"
+Here is a suggested claim:
 
-Write your claim:
-1. Title -- a propositional statement (not a question)
-2. Description -- one sentence adding context (~150 chars)
-3. Confidence -- established / supported / preliminary / speculative
+  Title:       "{suggested propositional title}"
+  Description: "{suggested description, ~150 chars}"
+  Confidence:  {suggested level}
+
+You can:
+- Approve as-is
+- Edit any field
+- Replace with your own claim entirely
 ```
 
 Wait for user response. Parse title, description, confidence.
+
+**Quality bar for suggestion:** The title must be a falsifiable proposition, not a topic label. The description must add new information beyond the title. Ground the suggestion in what the user's projects can actually test.
 
 ### Turn 2: Review and write
 
