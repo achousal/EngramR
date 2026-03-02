@@ -1,0 +1,54 @@
+{
+  "hooks": {
+    "SessionStart": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "ROOT=$(git rev-parse --show-toplevel 2>/dev/null || echo \"$PROJECT_DIR\") && cd \"$ROOT/_code\" && uv run python scripts/hooks/session_orient.py"
+          }
+        ]
+      }
+    ],
+    "PostToolUse": [
+      {
+        "matcher": "Write",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "ROOT=$(git rev-parse --show-toplevel 2>/dev/null || echo \"$PROJECT_DIR\") && cd \"$ROOT/_code\" && uv run python scripts/hooks/pipeline_bridge.py"
+          }
+        ]
+      },
+      {
+        "matcher": "Write|Edit",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "ROOT=$(git rev-parse --show-toplevel 2>/dev/null || echo \"$PROJECT_DIR\") && cd \"$ROOT/_code\" && uv run python scripts/hooks/validate_write.py"
+          }
+        ]
+      },
+      {
+        "matcher": "Write|Edit",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "ROOT=$(git rev-parse --show-toplevel 2>/dev/null || echo \"$PROJECT_DIR\") && cd \"$ROOT/_code\" && uv run python scripts/hooks/auto_commit.py",
+            "timeout": 10
+          }
+        ]
+      }
+    ],
+    "Stop": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "ROOT=$(git rev-parse --show-toplevel 2>/dev/null || echo \"$PROJECT_DIR\") && cd \"$ROOT/_code\" && uv run python scripts/hooks/session_capture.py"
+          }
+        ]
+      }
+    ]
+  }
+}

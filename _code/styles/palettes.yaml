@@ -1,0 +1,30 @@
+# Canonical color palettes for all research projects.
+#
+# Single source of truth: both Python (plot_theme.py) and R (palettes.R) load
+# this file. Domain profiles (e.g., bioinformatics) add lab-specific and
+# domain-specific palettes via merge.
+#
+# Semantic palettes here are universal (not domain-specific).
+
+# -- Semantic palettes (universal) ---------------------------------------------
+
+semantic:
+  binary:
+    Control: "#4DAF4A"
+    Case: "#E41A1C"
+  direction:
+    Up: "#E41A1C"
+    Down: "#377EB8"
+    NS: "#999999"
+  sig:
+    sig: "#E41A1C"
+    "not sig": "#999999"
+
+# -- Default categorical palette ------------------------------------------------
+
+categorical: "Set1"
+
+# -- Diverging and sequential palette names ------------------------------------
+
+diverging: "RdBu_r"
+sequential: "Blues"
