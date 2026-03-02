@@ -19,9 +19,6 @@ Read vault state and produce a structured summary for the /init orchestrator.
 
 ### Step 1: Read Core State
 
-Read domain vocabulary:
-- `ops/derivation-manifest.md` (or fall back to `ops/derivation.md`)
-
 Read agent identity:
 - `self/identity.md`
 - `self/methodology.md`

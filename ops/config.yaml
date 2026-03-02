@@ -70,8 +70,25 @@ processing:
                             # moderate: reasonable claims with clear provenance
                             # permissive: extract broadly, filter later
 
-    categories: auto        # auto: categories derived from ops/derivation.md
-                            # Or provide a YAML list of allowed claim types
+    categories:
+      - name: "claims"
+        what_to_find: "Testable assertions about mechanisms, effects, or relationships"
+        output_type: "claim"
+      - name: "evidence"
+        what_to_find: "Data points, measurements, statistical results"
+        output_type: "claim"
+      - name: "methodology-comparisons"
+        what_to_find: "How different studies approached similar questions"
+        output_type: "claim"
+      - name: "contradictions"
+        what_to_find: "Results or interpretations that conflict with existing claims"
+        output_type: "claim"
+      - name: "open-questions"
+        what_to_find: "Gaps in evidence, unresolved mechanisms, future directions"
+        output_type: "claim"
+      - name: "design-patterns"
+        what_to_find: "Reusable experimental designs, analytical approaches"
+        output_type: "claim"
 
   verification:
     description_test: true  # Verify descriptions add info beyond the title

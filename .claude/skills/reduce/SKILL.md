@@ -12,23 +12,14 @@ context: fork
 
 Read these files to configure domain-specific behavior:
 
-1. **`ops/derivation-manifest.md`** — vocabulary mapping, extraction categories, platform hints
-   - Use `vocabulary.notes` for the notes folder name
-   - Use `vocabulary.inbox` for the inbox folder name
-   - Use `vocabulary.note` for the note type name in output
-   - Use `vocabulary.note_plural` for the plural form
-   - Use `vocabulary.reduce` for the process verb in output
-   - Use `vocabulary.cmd_reflect` for the next-phase command name
-   - Use `vocabulary.cmd_reweave` for the backward-pass command name
-   - Use `vocabulary.cmd_verify` for the verification command name
-   - Use `vocabulary.extraction_categories` for domain-specific extraction table
-   - Use `vocabulary.topic_map` for MOC/topic map references
-   - Use `vocabulary.topic_maps` for plural form
+1. **`ops/derivation-manifest.md`** — platform hints
+   - Platform-specific behavior and dimension configuration
 
-2. **`ops/config.yaml`** — processing depth, pipeline chaining, selectivity
+2. **`ops/config.yaml`** — processing depth, pipeline chaining, selectivity, extraction categories
    - `processing.depth`: deep | standard | quick
    - `processing.chaining`: manual | suggested | automatic
    - `processing.extraction.selectivity`: strict | moderate | permissive
+   - `extraction_categories`: domain-specific extraction table
 
 3. **`ops/queue/queue.json`** — current task queue (for handoff mode)
 
@@ -36,21 +27,19 @@ If these files don't exist (pre-init invocation or standalone use), use universa
 - depth: standard
 - chaining: suggested
 - selectivity: moderate
-- notes folder: `notes/`
-- inbox folder: `inbox/`
 
 ---
 
 ## THE MISSION (READ THIS OR YOU WILL FAIL)
 
-You are the extraction engine. Raw source material enters. Structured, atomic {vocabulary.note_plural} exit. Everything between is your judgment — and that judgment must err toward extraction, not rejection.
+You are the extraction engine. Raw source material enters. Structured, atomic claims exit. Everything between is your judgment — and that judgment must err toward extraction, not rejection.
 
 ### The Core Distinction
 
 | Concept | What It Means | Example |
 |---------|---------------|---------|
 | **Having knowledge** | The vault contains information | "We store notes in folders" |
-| **Articulated reasoning** | The vault explains WHY something works as a traversable {vocabulary.note} | "folder structure mirrors cognitive chunking because..." |
+| **Articulated reasoning** | The vault explains WHY something works as a traversable claim | "folder structure mirrors cognitive chunking because..." |
 
 **Having knowledge is not the same as articulating it.** Even if information is embedded in the system, the vault may lack the externalized reasoning explaining WHY it works. That reasoning is what you extract.
 
@@ -58,21 +47,21 @@ You are the extraction engine. Raw source material enters. Structured, atomic {v
 
 **For domain-relevant sources, COMPREHENSIVE EXTRACTION is the default.** This means:
 
-1. **Extract ALL core {vocabulary.note_plural}** — direct assertions about the domain that can stand alone as atomic propositions.
+1. **Extract ALL core claims** — direct assertions about the domain that can stand alone as atomic propositions.
 
-2. **Extract ALL evidence and validations** — if source confirms an approach, that confirmation IS the {vocabulary.note}. Evidence is extractable even when the conclusion is already known, because the reasoning path matters.
+2. **Extract ALL evidence and validations** — if source confirms an approach, that confirmation IS the claim. Evidence is extractable even when the conclusion is already known, because the reasoning path matters.
 
 3. **Extract ALL patterns and methods** — techniques, workflows, practices. Named patterns are referenceable. Unnamed intuitions are not.
 
 4. **Extract ALL tensions** — contradictions, trade-offs, conflicts. These are wisdom, not problems.
 
-5. **Extract ALL enrichments** — if source adds detail to existing {vocabulary.note_plural}, create enrichment tasks. Near-duplicates almost always add value.
+5. **Extract ALL enrichments** — if source adds detail to existing claims, create enrichment tasks. Near-duplicates almost always add value.
 
 **"We already know this" means we NEED the articulation, not that we should skip it.**
 
 ### The Extraction Question (ask for EVERY candidate)
 
-**"Would a future session benefit from this reasoning being a retrievable {vocabulary.note}?"**
+**"Would a future session benefit from this reasoning being a retrievable claim?"**
 
 If YES -> extract to appropriate category
 If NO -> verify it is truly off-topic before skipping
@@ -80,7 +69,7 @@ If NO -> verify it is truly off-topic before skipping
 ### INVALID Skip Reasons (these are BUGS)
 
 - "validates existing approach" — validations ARE the evidence. Extract them.
-- "already captured in system config" — config is implementation, not articulation. The WHY needs a {vocabulary.note}.
+- "already captured in system config" — config is implementation, not articulation. The WHY needs a claim.
 - "we already do this" — DOING is not EXPLAINING. The explanation needs externalization.
 - "obvious" — obvious to whom? Future sessions need explicit reasoning.
 - "near-duplicate" — near-duplicates almost always add detail. Create enrichment task.
@@ -88,7 +77,7 @@ If NO -> verify it is truly off-topic before skipping
 
 ### VALID Skip Reasons (rare)
 
-- Completely off-topic (unrelated to {vocabulary.domain})
+- Completely off-topic (unrelated to the domain)
 - Too vague to act on (applies to everything, disagrees with nothing)
 - Pure summary with zero extractable insight
 - LITERALLY identical text already exists (not "same topic" — IDENTICAL)
@@ -104,7 +93,7 @@ If NO -> verify it is truly off-topic before skipping
 Parse immediately:
 - If target contains a file path: extract insights from that file
 - If target contains `--handoff`: output RALPH HANDOFF block + task entries at end
-- If target is empty: scan {vocabulary.inbox}/ for unprocessed items, pick one
+- If target is empty: scan inbox/ for unprocessed items, pick one
 - If target is "inbox" or "all": process all inbox items sequentially
 
 **Execute these steps:**
@@ -113,8 +102,8 @@ Parse immediately:
 2. **Source size check:** If source exceeds 2500 lines, STOP. Plan chunks of 350-1200 lines. Process each chunk with fresh context. See "Large Source Handling" section below.
 3. Hunt for insights that serve the domain (see extraction categories below)
 4. For each candidate:
-   - Tier 1 (preferred): use `mcp__qmd__vector_search` with query "[claim as sentence]", collection="{vocabulary.notes_collection}", limit=5
-   - Tier 2 (CLI fallback): `qmd vsearch "[claim as sentence]" --collection {vocabulary.notes_collection} -n 5`
+   - Tier 1 (preferred): use `mcp__qmd__vector_search` with query "[claim as sentence]", collection="notes", limit=5
+   - Tier 2 (CLI fallback): `qmd vsearch "[claim as sentence]" --collection notes -n 5`
    - Tier 3 fallback if qmd is unavailable: use keyword grep duplicate checks
    - If duplicate exists: evaluate for enrichment or skip
    - Classify as OPEN (needs more investigation) or CLOSED (standalone, ready)
@@ -131,7 +120,7 @@ When you encounter friction, surprises, methodology insights, process gaps, or c
 | Observation | Action |
 |-------------|--------|
 | Any observation | Create atomic note in `ops/observations/` with prose-sentence title |
-| Tension: content contradicts existing {vocabulary.note} | Create atomic note in `ops/tensions/` with prose-sentence title |
+| Tension: content contradicts existing claim | Create atomic note in `ops/tensions/` with prose-sentence title |
 
 The handoff Learnings section summarizes what you ALREADY logged during processing.
 
@@ -139,7 +128,7 @@ The handoff Learnings section summarizes what you ALREADY logged during processi
 
 # Reduce
 
-Extract composable {vocabulary.note_plural} from source material into {vocabulary.notes}/.
+Extract composable claims from source material into notes/.
 
 ## Philosophy
 
@@ -159,13 +148,13 @@ The vault is not just an implementation. It is **the articulated argument for WH
 **THE EXTRACTION QUESTION:**
 
 - BASIC thinking: "Is this a standalone composable claim?"
-- BETTER thinking: "Does this serve {vocabulary.domain}?"
-- BEST thinking: **"Would a future session benefit from this reasoning being a retrievable {vocabulary.note}?"**
+- BETTER thinking: "Does this serve the domain?"
+- BEST thinking: **"Would a future session benefit from this reasoning being a retrievable claim?"**
 
 If YES -> extract to appropriate category (even if "we already know this")
 If NO -> skip (RARE for domain-relevant sources — verify it is truly off-topic)
 
-**THE RULE:** Implementation without articulation is incomplete. If we DO something but lack a {vocabulary.note} explaining WHY it works, that articulation needs extraction.
+**THE RULE:** Implementation without articulation is incomplete. If we DO something but lack a claim explaining WHY it works, that articulation needs extraction.
 
 ---
 
@@ -173,7 +162,7 @@ If NO -> skip (RARE for domain-relevant sources — verify it is truly off-topic
 
 ### What To Extract
 
-{DOMAIN:extraction_categories}
+See extraction_categories in ops/config.yaml
 
 ### Hypothesis Source Handling
 
@@ -199,16 +188,16 @@ When the source file has `type: hypothesis` in its YAML frontmatter (files in `_
 
 | Category | What to Find | Output Type | Gate Required? |
 |----------|--------------|-------------|----------------|
-| Core domain {vocabulary.note_plural} | Direct assertions about {vocabulary.domain} | {vocabulary.note} | NO |
-| Patterns | Recurring structures across sources | {vocabulary.note} | NO |
-| Comparisons | How different approaches compare, X vs Y, trade-offs | {vocabulary.note} | NO |
+| Core domain claims | Direct assertions about the domain | claim | NO |
+| Patterns | Recurring structures across sources | claim | NO |
+| Comparisons | How different approaches compare, X vs Y, trade-offs | claim | NO |
 | Tensions | Contradictions, conflicts, unresolved trade-offs | tension note | NO |
 | Anti-patterns | What breaks, what to avoid, failure modes | problem note | NO |
-| Enrichments | Content that adds detail to existing {vocabulary.note_plural} | enrichment task | NO |
-| Open questions | Unresolved questions worth tracking | {vocabulary.note} (open) | NO |
+| Enrichments | Content that adds detail to existing claims | enrichment task | NO |
+| Open questions | Unresolved questions worth tracking | claim (open) | NO |
 | Implementation ideas | Techniques, workflows, features to build | methodology note | NO |
-| Validations | Evidence confirming an approach works | {vocabulary.note} | NO |
-| Off-topic general content | Insight unrelated to {vocabulary.domain} | apply selectivity gate | YES |
+| Validations | Evidence confirming an approach works | claim | NO |
+| Off-topic general content | Insight unrelated to the domain | apply selectivity gate | YES |
 
 **IMPORTANT:** Categories 1-9 bypass the selectivity gate. They extract directly to the appropriate output type. The selectivity gate exists ONLY for filtering off-topic content from general sources.
 
@@ -219,7 +208,7 @@ Hunt for these signals in every source:
 **Core domain signals:**
 - Direct assertions: "the key insight is...", "this means that...", "the pattern is..."
 - Evidence: "research shows...", "data indicates...", "studies confirm..."
-- Named methods: any named system, technique, or framework relevant to {vocabulary.domain}
+- Named methods: any named system, technique, or framework relevant to the domain
 
 **Comparison signals:**
 - "X vs Y", "trade-off between...", "prefer X when...", "unlike Y, this..."
@@ -234,7 +223,7 @@ Hunt for these signals in every source:
 - Warnings, cautionary examples, failure postmortems
 
 **Enrichment signals:**
-- Content covering ground similar to an existing {vocabulary.note}
+- Content covering ground similar to an existing claim
 - New examples, evidence, or framing for an established claim
 - Deeper explanation of something already captured shallowly
 
@@ -248,7 +237,7 @@ Hunt for these signals in every source:
 
 ### The Mission Lens (REQUIRED)
 
-For EVERY candidate, ask: **"Does this serve {vocabulary.domain}?"**
+For EVERY candidate, ask: **"Does this serve the domain?"**
 
 - YES -> **extract to appropriate category** (gate does NOT apply)
 - NO -> apply selectivity gate (for off-topic filtering only)
@@ -259,7 +248,7 @@ For EVERY candidate, ask: **"Does this serve {vocabulary.domain}?"**
 
 ## The Selectivity Gate (for OFF-TOPIC content filtering)
 
-**CRITICAL:** This gate exists to filter OUT content that does not serve {vocabulary.domain}. It applies ONLY to standard claims from GENERAL (off-topic) sources.
+**CRITICAL:** This gate exists to filter OUT content that does not serve the domain. It applies ONLY to standard claims from GENERAL (off-topic) sources.
 
 **Do NOT use gate to reject:**
 - Implementation ideas ("not a claim" is WRONG — it is roadmap)
@@ -272,23 +261,23 @@ For STANDARD claims from general sources, verify all four criteria pass:
 
 ### 1. Standalone
 
-The claim is understandable without source context. Someone reading this {vocabulary.note} cold can grasp what it argues without needing to know where it came from.
+The claim is understandable without source context. Someone reading this claim cold can grasp what it argues without needing to know where it came from.
 
 Fail: "the author's third point about methodology"
 Pass: "explicit structure beats implicit convention"
 
 ### 2. Composable
 
-This {vocabulary.note} would be linked FROM elsewhere. {vocabulary.note_plural} function as APIs. If you cannot imagine writing `since [[this claim]]...` in another {vocabulary.note}, it is not composable.
+This claim would be linked FROM elsewhere. claims function as APIs. If you cannot imagine writing `since [[this claim]]...` in another claim, it is not composable.
 
 Fail: a summary of someone's argument
 Pass: a claim you could invoke while building your own argument
 
 ### 3. Novel
 
-Not already captured in the vault. Semantic duplicate check AND existing {vocabulary.note_plural} scan both clear.
+Not already captured in the vault. Semantic duplicate check AND existing claims scan both clear.
 
-Fail: semantically equivalent to an existing {vocabulary.note}
+Fail: semantically equivalent to an existing claim
 Pass: genuinely new angle not yet articulated
 
 ### 4. Connected
@@ -296,7 +285,7 @@ Pass: genuinely new angle not yet articulated
 Relates to existing thinking in the vault. Isolated insights that do not connect to anything are orphans. They rot.
 
 Fail: interesting observation about unrelated domain
-Pass: extends, contradicts, or deepens existing {vocabulary.note_plural}
+Pass: extends, contradicts, or deepens existing claims
 
 **If ANY criterion fails: do not extract.**
 
@@ -310,19 +299,19 @@ Before reading the source, understand what already exists:
 
 ```bash
 # Get descriptions from existing notes
-for f in {vocabulary.notes}/*.md; do
+for f in notes/*.md; do
   [[ -f "$f" ]] && echo "=== $(basename "$f" .md) ===" && rg "^description:" "$f" -A 0
 done
 ```
 
-Scan descriptions to understand current {vocabulary.note_plural}. This prevents duplicate extraction and helps identify connection points and enrichment opportunities.
+Scan descriptions to understand current claims. This prevents duplicate extraction and helps identify connection points and enrichment opportunities.
 
 ### 2. Read Source Fully
 
 Read the ENTIRE source. Understand what it contains, what it argues, what domain it serves.
 
 **Planning the extraction:**
-- How many {vocabulary.note_plural} do you expect from this source?
+- How many claims do you expect from this source?
 - What categories will be represented?
 - Is this domain-relevant (comprehensive extraction) or general (gate applies)?
 
@@ -357,14 +346,14 @@ This is the critical step that prevents over-rejection. Categorize FIRST, then r
 
 | Category | How to Identify | Route To |
 |----------|-----------------|----------|
-| Core domain {vocabulary.note} | Direct assertion about {vocabulary.domain} | -> {vocabulary.note} (SKIP selectivity gate) |
+| Core domain claim | Direct assertion about the domain | -> claim (SKIP selectivity gate) |
 | Implementation idea | Describes a feature, tool, system, or workflow to build | -> methodology note (SKIP selectivity gate) |
 | Tension/challenge | Describes a conflict, risk, or trade-off | -> tension note (SKIP selectivity gate) |
-| Validation | Evidence confirming an approach works | -> {vocabulary.note} (SKIP selectivity gate) |
-| Near-duplicate | Semantic search finds related vault {vocabulary.note} | -> evaluate for enrichment task |
-| Off-topic claim | General insight not about {vocabulary.domain} | -> apply selectivity gate |
+| Validation | Evidence confirming an approach works | -> claim (SKIP selectivity gate) |
+| Near-duplicate | Semantic search finds related vault claim | -> evaluate for enrichment task |
+| Off-topic claim | General insight not about the domain | -> apply selectivity gate |
 
-**CRITICAL:** Implementation ideas, tensions, validations, and domain {vocabulary.note_plural} do NOT need to pass the 4-criterion selectivity gate. The gate is for off-topic filtering ONLY.
+**CRITICAL:** Implementation ideas, tensions, validations, and domain claims do NOT need to pass the 4-criterion selectivity gate. The gate is for off-topic filtering ONLY.
 
 **Why this matters:** The selectivity gate was designed for filtering general insights. But implementation ideas ("build a trails feature"), tensions ("optimization vs readability trade-off"), and validations ("research confirms our approach") are DIFFERENT output types that serve different purposes. Applying the selectivity gate to them is a category error.
 
@@ -373,38 +362,38 @@ This is the critical step that prevents over-rejection. Categorize FIRST, then r
 For each candidate, run duplicate detection:
 
 ```
-mcp__qmd__vector_search  query="[proposed claim as sentence]"  collection="{vocabulary.notes_collection}"  limit=5
+mcp__qmd__vector_search  query="[proposed claim as sentence]"  collection="notes"  limit=5
 ```
 If MCP is unavailable, run:
 ```bash
-qmd vsearch "[proposed claim as sentence]" --collection {vocabulary.notes_collection} -n 5
+qmd vsearch "[proposed claim as sentence]" --collection notes -n 5
 ```
 If qmd CLI is unavailable, fall back to keyword grep duplicate checks.
 
-**Why `vector_search` (vector semantic) instead of keyword search:** Duplicate detection is where keyword search fails hardest. A claim about "friction in systems" will not find "resistance to change" via keyword matching even though they may be semantic duplicates. Vector search (~5s) catches same-concept-different-words duplicates that keyword search misses entirely. For a batch of 30-50 candidates, this adds ~3 minutes total — worth it to catch duplicates early rather than discovering them during {vocabulary.cmd_reflect}.
+**Why `vector_search` (vector semantic) instead of keyword search:** Duplicate detection is where keyword search fails hardest. A claim about "friction in systems" will not find "resistance to change" via keyword matching even though they may be semantic duplicates. Vector search (~5s) catches same-concept-different-words duplicates that keyword search misses entirely. For a batch of 30-50 candidates, this adds ~3 minutes total — worth it to catch duplicates early rather than discovering them during /reflect.
 
 **Scores are signals, not decisions.** For ANY result with a relevant title or snippet:
 
-1. **READ the full {vocabulary.note}**
+1. **READ the full claim**
 2. Compare: is this the SAME claim in different words?
-3. Ask: **"What does source add that existing {vocabulary.note} lacks?"**
+3. Ask: **"What does source add that existing claim lacks?"**
 
 **The Enrichment Judgment (DEFAULT TO ENRICHMENT):**
 
 | Situation | Action |
 |-----------|--------|
 | Exact text already exists | SKIP (truly identical — RARE) |
-| Same claim, different words, source adds nothing | SKIP (verify by re-reading existing {vocabulary.note}) |
-| Same claim, source has MORE detail/examples/framing | -> ENRICHMENT TASK (update existing {vocabulary.note}) |
-| Same topic, DIFFERENT claim | -> EXTRACT as new {vocabulary.note}, flag for cross-linking |
-| Related mechanism, different scope | -> EXTRACT as new {vocabulary.note}, flag for cross-linking |
+| Same claim, different words, source adds nothing | SKIP (verify by re-reading existing claim) |
+| Same claim, source has MORE detail/examples/framing | -> ENRICHMENT TASK (update existing claim) |
+| Same topic, DIFFERENT claim | -> EXTRACT as new claim, flag for cross-linking |
+| Related mechanism, different scope | -> EXTRACT as new claim, flag for cross-linking |
 
 **DEFAULT TO ENRICHMENT.** If source mentions the same topic, it almost certainly adds something. Truly identical content is RARE.
 
 **MANDATORY protocol when semantic search finds overlap:**
 
-1. **READ the existing {vocabulary.note} fully** (not just title/description)
-2. Ask: "What does source ADD that existing {vocabulary.note} LACKS?"
+1. **READ the existing claim fully** (not just title/description)
+2. Ask: "What does source ADD that existing claim LACKS?"
    - New examples -> ENRICHMENT
    - Deeper framing -> ENRICHMENT
    - Citations/evidence -> ENRICHMENT
@@ -433,7 +422,7 @@ Report what you found by category. **Include counts:**
 Extraction scan complete.
 
 SUMMARY:
-- {vocabulary.note_plural}: N
+- claims: N
 - implementation ideas: N
 - tensions: N
 - enrichment tasks: N
@@ -444,7 +433,7 @@ SUMMARY:
 
 ---
 
-CLAIMS ({vocabulary.note_plural}):
+CLAIMS (claims):
 1. [claim as sentence] — connects to [[existing note]]
 2. [claim as sentence] — extends [[existing note]]
 ...
@@ -457,7 +446,7 @@ TENSIONS (tension notes):
 1. [X vs Y] — the conflict, why it matters
 ...
 
-ENRICHMENT TASKS (update existing {vocabulary.note_plural}):
+ENRICHMENT TASKS (update existing claims):
 1. [[existing note]] — source adds [what is missing]
 ...
 
@@ -469,13 +458,13 @@ SKIPPED (truly nothing to add):
 
 ### 7. Extract (With User Approval)
 
-For each approved {vocabulary.note}:
+For each approved claim:
 
 **a. Craft the title**
 
 The title IS the claim. Express the concept in exactly the words that capture it.
 
-Test: "this {vocabulary.note} argues that [title]"
+Test: "this claim argues that [title]"
 - Must make grammatical sense
 - Must be something you could agree or disagree with
 - Composability over brevity — a full sentence is fine if the concept requires it
@@ -486,7 +475,7 @@ Good: "explicit structure beats implicit convention for agent navigation"
 Good: "small differences compound through repeated selection"
 Bad: "context management strategies" (topic label, not a claim)
 
-**b. Write the {vocabulary.note}**
+**b. Write the claim**
 
 ```markdown
 ---
@@ -499,7 +488,7 @@ verified_by: agent
 verified_who: null
 verified_date: null
 created: "YYYY-MM-DD"
-[domain-specific fields from derivation-manifest]
+[domain-specific fields if applicable]
 ---
 
 # [prose-as-title proposition]
@@ -541,21 +530,21 @@ Topics:
   - `speculative`: inference, not directly demonstrated, novel synthesis
 
 Topics:
-- [[relevant {vocabulary.topic_map}]]
+- [[relevant topic map]]
 ```
 
 **c. Verify before writing**
 
-- Title passes the claim test ("this {vocabulary.note} argues that [title]")
+- Title passes the claim test ("this claim argues that [title]")
 - Description adds information beyond the title (not a restatement)
 - Body shows reasoning, not just assertion
-- At least one relevant {vocabulary.note} connection identified
-- At least one {vocabulary.topic_map} link
+- At least one relevant claim connection identified
+- At least one topic map link
 - Source attribution present
 
 **d. Create the file**
 
-Write to: `{vocabulary.notes}/[title].md`
+Write to: `notes/[title].md`
 
 ---
 
@@ -586,9 +575,9 @@ Context degrades as it fills. A single-pass extraction of a 3000-line source wil
 ### Cross-Chunk Coordination
 
 When processing in chunks:
-1. Keep a running list of extracted {vocabulary.note_plural} across chunks
-2. Later chunks check against earlier chunks' extractions (not just existing vault {vocabulary.note_plural})
-3. Cross-chunk connections get flagged for {vocabulary.cmd_reflect}
+1. Keep a running list of extracted claims across chunks
+2. Later chunks check against earlier chunks' extractions (not just existing vault claims)
+3. Cross-chunk connections get flagged for /reflect
 4. The final extraction report covers ALL chunks combined
 
 **The anti-pattern:** Processing chunk 3 and extracting a duplicate of something already extracted in chunk 1 because you lost track. Maintain the running list.
@@ -597,13 +586,13 @@ When processing in chunks:
 
 ## Enrichment Detection
 
-When source content adds value to an EXISTING {vocabulary.note} rather than creating a new one, create an enrichment task instead.
+When source content adds value to an EXISTING claim rather than creating a new one, create an enrichment task instead.
 
 ### When to Create Enrichment Tasks
 
 | Signal | Action |
 |--------|--------|
-| Source has better examples for an existing {vocabulary.note} | Enrichment: add examples |
+| Source has better examples for an existing claim | Enrichment: add examples |
 | Source has deeper framing or context | Enrichment: strengthen reasoning |
 | Source has citations or evidence | Enrichment: add evidence base |
 | Source has a different angle on the same claim | Enrichment: add perspective |
@@ -612,12 +601,12 @@ When source content adds value to an EXISTING {vocabulary.note} rather than crea
 ### Enrichment Task Format
 
 Each enrichment task specifies:
-- **Target:** Which existing {vocabulary.note} to enrich (by title)
+- **Target:** Which existing claim to enrich (by title)
 - **What to add:** Specific content from the source
-- **Why:** What the existing {vocabulary.note} lacks that this adds
+- **Why:** What the existing claim lacks that this adds
 - **Source lines:** Where in the source the enrichment content is found
 
-**The enrichment default:** When in doubt between "new {vocabulary.note}" and "enrichment to existing {vocabulary.note}", lean toward enrichment. The existing {vocabulary.note} already has connections, {vocabulary.topic_map} placement, and integration. Adding to it compounds existing value.
+**The enrichment default:** When in doubt between "new claim" and "enrichment to existing claim", lean toward enrichment. The existing claim already has connections, topic map placement, and integration. Adding to it compounds existing value.
 
 ---
 
@@ -631,13 +620,13 @@ Each enrichment task specifies:
 
 1. **"validates existing approach" as skip reason**
    - WRONG: "This just confirms what we do, skip"
-   - RIGHT: Validations ARE valuable. Extract as {vocabulary.note} with evidence framing.
+   - RIGHT: Validations ARE valuable. Extract as claim with evidence framing.
    - WHY: Future sessions need to see WHY an approach is validated, not just that it works.
 
 2. **"already captured in system config" as skip reason**
    - WRONG: "We already have this in our config, skip"
    - RIGHT: Extract "session handoff creates continuity without persistent memory"
-   - WHY: Config is implementation. {vocabulary.note_plural} explain WHY it works.
+   - WHY: Config is implementation. claims explain WHY it works.
 
 3. **"we already do this" as skip reason**
    - WRONG: "We use wiki links, this is obvious, skip"
@@ -651,7 +640,7 @@ Each enrichment task specifies:
 
 5. **Treating near-duplicates as skips instead of enrichments**
    - WRONG: "Similar to existing note, skip"
-   - RIGHT: Create enrichment task to add source's details to existing {vocabulary.note}
+   - RIGHT: Create enrichment task to add source's details to existing claim
    - WHY: Near-duplicates almost always add framing, examples, or evidence.
 
 #### Other Red Flags
@@ -665,7 +654,7 @@ Each enrichment task specifies:
 
 #### The Test
 
-Before skipping ANYTHING, ask: **"Would a future session benefit from this being a retrievable {vocabulary.note}?"**
+Before skipping ANYTHING, ask: **"Would a future session benefit from this being a retrievable claim?"**
 
 If YES -> extract (even if "we already know this")
 If NO -> verify it is truly off-topic or literally identical to existing content
@@ -677,7 +666,7 @@ If NO -> verify it is truly off-topic or literally identical to existing content
 ### Red Flags: Extraction Too Loose
 
 - Extracting vague observations with no actionable content
-- Creating {vocabulary.note_plural} without articulating vault connection
+- Creating claims without articulating vault connection
 - Titles that are topics, not claims ("knowledge management" instead of "knowledge management fails without active maintenance")
 - Body text that is pure summary without reasoning
 
@@ -686,7 +675,7 @@ If NO -> verify it is truly off-topic or literally identical to existing content
 **STOP before outputting results.** Count your outputs by category:
 
 ```
-{vocabulary.note_plural} extracted: ?
+claims extracted: ?
 implementation ideas: ?
 tensions: ?
 enrichment tasks: ?
@@ -727,9 +716,9 @@ Processing selectivity adapts based on `ops/config.yaml`:
 
 Go back through candidates you marked as "duplicate" or "rejected":
 
-1. **Did any "duplicates" have source content that enriches existing {vocabulary.note_plural}?**
+1. **Did any "duplicates" have source content that enriches existing claims?**
    - YES -> convert to enrichment task (DEFAULT TO ENRICHMENT)
-   - NO -> verify by re-reading existing {vocabulary.note} FULLY
+   - NO -> verify by re-reading existing claim FULLY
 
 2. **Did any "rejected" items describe features to build?**
    - YES -> extract as implementation idea
@@ -744,7 +733,7 @@ Go back through candidates you marked as "duplicate" or "rejected":
    - NO -> verify it does not support existing methodology
 
 5. **Did any "rejected" items suggest questions worth investigating?**
-   - YES -> extract as open question {vocabulary.note}
+   - YES -> extract as open question claim
    - NO -> verify it is not worth tracking
 
 **Do not proceed with handoff until low yield is investigated.**
@@ -763,7 +752,7 @@ the insight is that [[small differences compound through repeated selection]]
 because [[capture speed beats filing precision]], we separate the two...
 ```
 
-The claim test: "this {vocabulary.note} argues that [title]"
+The claim test: "this claim argues that [title]"
 
 | Example | Passes? |
 |---------|---------|
@@ -825,7 +814,7 @@ Characteristics:
 - Shows path to conclusion
 - Acknowledges where thinking might be wrong
 - Considers strongest objection
-- Invokes other {vocabulary.note_plural} as prose
+- Invokes other claims as prose
 
 ### Section Headings
 
@@ -833,7 +822,7 @@ Headings serve navigation, not decoration. Use when agents would benefit from gr
 
 **Always use headings for:**
 - Tension notes (sections: Quick Test, When Each Pole Wins, Dissolution Attempts, Practical Applications)
-- {vocabulary.topic_map} notes (sections: Synthesis, Core Ideas, Tensions, Explorations Needed, Agent Notes)
+- topic map notes (sections: Synthesis, Core Ideas, Tensions, Explorations Needed, Agent Notes)
 - Implementation patterns with discrete steps
 - Notes exploring multiple facets of a concept (>1000 words AND distinct sub-topics)
 
@@ -852,7 +841,7 @@ Relevant Notes:
 - [[related claim]] — extends this by adding the temporal dimension
 
 Topics:
-- [[relevant {vocabulary.topic_map}]]
+- [[relevant topic map]]
 ```
 
 The relationship context explains WHY to follow the link:
@@ -864,16 +853,16 @@ The relationship context explains WHY to follow the link:
 
 ## The Composability Test
 
-Before finalizing ANY {vocabulary.note}, verify:
+Before finalizing ANY claim, verify:
 
 **1. Standalone Sense**
-If you link to this {vocabulary.note} from another context, will it make sense without reading three other {vocabulary.note_plural} first?
+If you link to this claim from another context, will it make sense without reading three other claims first?
 
 **2. Specificity**
-Could someone disagree with this claim? Vague {vocabulary.note_plural} cannot be built on.
+Could someone disagree with this claim? Vague claims cannot be built on.
 
 **3. Clean Linking**
-Would linking to this {vocabulary.note} drag unrelated content along? If yes, the {vocabulary.note} covers too much.
+Would linking to this claim drag unrelated content along? If yes, the claim covers too much.
 
 **When to skip:** content does not pass all four selectivity criteria (off-topic content only)
 **When to split:** multiple distinct claims in one extraction
@@ -885,9 +874,9 @@ Would linking to this {vocabulary.note} drag unrelated content along? If yes, th
 
 When the source file contains provenance metadata (source_type, research_prompt, research_server, generated), preserve the chain:
 
-- Each created {vocabulary.note}'s Source footer links to the source file
+- Each created claim's Source footer links to the source file
 - The source file's YAML contains the research prompt
-- The chain: research query -> inbox file -> /{vocabulary.reduce} -> {vocabulary.notes}
+- The chain: research query -> inbox file -> /reduce -> notes
 
 If source has `source_type` in frontmatter, this is research-generated content — handle with extra care for attribution.
 
@@ -908,26 +897,26 @@ The research_prompt is the most critical field — it captures the intellectual 
 
 ### Example 1: 300-line domain-relevant source
 
-**Source:** 300-line research document directly relevant to {vocabulary.domain}
+**Source:** 300-line research document directly relevant to the domain
 
 **Scan found:** ~45 items across sections
 
 **Extraction results:**
-- 12 core {vocabulary.note_plural}
+- 12 core claims
 - 6 implementation ideas -> methodology notes
 - 4 tensions -> tension notes
-- 5 enrichment tasks -> update existing {vocabulary.note_plural}
-- 3 validations -> {vocabulary.note_plural}
+- 5 enrichment tasks -> update existing claims
+- 3 validations -> claims
 - 3 skipped (too vague to act on)
 
 **Total: 30 outputs, 3 skipped (~9% skip rate)**
 
 ### Example 2: 100-line general article
 
-**Source:** 100-line article with partial relevance to {vocabulary.domain}
+**Source:** 100-line article with partial relevance to the domain
 
 **Extraction results:**
-- 4 core {vocabulary.note_plural}
+- 4 core claims
 - 1 enrichment task
 - 2 skipped (off-topic)
 - 3 skipped (too vague)
@@ -950,7 +939,7 @@ Never auto-extract. Always present findings and wait for user approval.
 
 **When in doubt, extract.** For domain-relevant sources, err toward capturing. Implementation ideas, tensions, validations, open questions, and near-duplicates all have value — they become different output types, not rejections.
 
-**The principle:** the goal is to capture everything relevant to {vocabulary.domain}. For domain-relevant sources, that is MOST of the content. The selectivity gate exists for OFF-TOPIC filtering, not for rejecting on-mission content that happens to have a different form.
+**The principle:** the goal is to capture everything relevant to the domain. For domain-relevant sources, that is MOST of the content. The selectivity gate exists for OFF-TOPIC filtering, not for rejecting on-mission content that happens to have a different form.
 
 **Remember:**
 - Implementation ideas are NOT "not claims" — they are roadmap
@@ -1009,14 +998,14 @@ Semantic neighbor: [if found, explain why DISTINCT not DUPLICATE]
 ## Create
 (to be filled by create phase)
 
-## {vocabulary.cmd_reflect}
-(to be filled by {vocabulary.cmd_reflect} phase)
+## /reflect
+(to be filled by /reflect phase)
 
-## {vocabulary.cmd_reweave}
-(to be filled by {vocabulary.cmd_reweave} phase)
+## /reweave
+(to be filled by /reweave phase)
 
-## {vocabulary.cmd_verify}
-(to be filled by {vocabulary.cmd_verify} phase)
+## /verify
+(to be filled by /verify phase)
 ```
 
 ### Enrichment Task Files (REQUIRED in handoff mode)
@@ -1057,14 +1046,14 @@ Rationale: [why this enriches rather than duplicates]
 ## Enrich
 (to be filled by enrich phase)
 
-## {vocabulary.cmd_reflect}
-(to be filled by {vocabulary.cmd_reflect} phase)
+## /reflect
+(to be filled by /reflect phase)
 
-## {vocabulary.cmd_reweave}
-(to be filled by {vocabulary.cmd_reweave} phase)
+## /reweave
+(to be filled by /reweave phase)
 
-## {vocabulary.cmd_verify}
-(to be filled by {vocabulary.cmd_verify} phase)
+## /verify
+(to be filled by /verify phase)
 ```
 
 ### Queue Updates (REQUIRED in handoff mode)
@@ -1183,18 +1172,18 @@ When processing content, route to the correct skill:
 
 | Task Type | Required Skill | Why |
 |-----------|---------------|-----|
-| New content to process | /{vocabulary.reduce} | Extraction requires quality gates |
-| {vocabulary.note} just created | /{vocabulary.cmd_reflect} | New {vocabulary.note_plural} need connections |
-| After connecting | /{vocabulary.cmd_reweave} | Old {vocabulary.note_plural} need updating |
-| Quality check | /{vocabulary.cmd_verify} | Combined verification gate |
+| New content to process | /reduce | Extraction requires quality gates |
+| claim just created | /reflect | New claims need connections |
+| After connecting | /reweave | Old claims need updating |
+| Quality check | /verify | Combined verification gate |
 | System health | /health | Systematic diagnostics |
 
 ## Pipeline Chaining
 
 After extraction completes, output the next step based on `ops/config.yaml` pipeline chaining mode:
 
-- **manual:** Output "Next: {vocabulary.cmd_reflect} [created notes]" — user decides when to proceed
-- **suggested:** Output next step AND add each created {vocabulary.note} to `ops/queue/queue.json` with `current_phase: "create"` and `completed_phases: []`
+- **manual:** Output "Next: /reflect [created notes]" — user decides when to proceed
+- **suggested:** Output next step AND add each created claim to `ops/queue/queue.json` with `current_phase: "create"` and `completed_phases: []`
 - **automatic:** Queue entries created and processing continues immediately via orchestration
 
-The chaining output uses domain-native command names from the derivation manifest.
+The chaining output uses the hardcoded command names: /reflect, /reweave, /verify.

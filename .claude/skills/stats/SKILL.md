@@ -14,16 +14,7 @@ argument-hint: "[--share | --dev [section]] — vault stats, shareable output, o
 
 Read these files to configure domain-specific behavior:
 
-1. **`ops/derivation-manifest.md`** — vocabulary mapping
-   - Use `vocabulary.notes` for the notes folder name
-   - Use `vocabulary.note` / `vocabulary.note_plural` for note type references
-   - Use `vocabulary.topic_map` / `vocabulary.topic_map_plural` for MOC references
-   - Use `vocabulary.inbox` for the inbox folder name
-   - Use `vocabulary.notes_collection` for semantic search collection name
-
-2. **`ops/config.yaml`** — processing depth, automation settings
-
-If no derivation file exists, use universal terms (notes, MOCs, etc.).
+1. **`ops/config.yaml`** — processing depth, automation settings
 
 ---
 
@@ -47,7 +38,7 @@ Parse immediately:
 
 The knowledge graph grows silently. Without metrics, the user cannot tell whether their system is healthy, growing, stagnating, or fragmenting. /stats provides a snapshot that makes growth tangible — numbers that show progress, health indicators that catch problems, and trends that reveal trajectory.
 
-The output should make the user feel informed, not overwhelmed. Metrics are evidence, not judgment. "12 orphans" is a fact. What to DO about it belongs to /graph or /{vocabulary.cmd_reflect}.
+The output should make the user feel informed, not overwhelmed. Metrics are evidence, not judgment. "12 orphans" is a fact. What to DO about it belongs to /graph or /reflect.
 
 ---
 
@@ -58,7 +49,7 @@ Gather all metrics. Run these checks in parallel where possible to minimize late
 ### 1a. Knowledge Graph Metrics
 
 ```bash
-NOTES_DIR="{vocabulary.notes}"
+NOTES_DIR="notes/"
 
 # Note count (excluding MOCs)
 TOTAL_FILES=$(ls -1 "$NOTES_DIR"/*.md 2>/dev/null | wc -l | tr -d ' ')
@@ -137,7 +128,7 @@ fi
 
 ```bash
 # Inbox items
-INBOX_COUNT=$(find {vocabulary.inbox}/ -name "*.md" 2>/dev/null | wc -l | tr -d ' ')
+INBOX_COUNT=$(find inbox/ -name "*.md" 2>/dev/null | wc -l | tr -d ' ')
 
 # Queue pending (check both YAML and JSON formats)
 QUEUE_FILE=""
@@ -252,9 +243,9 @@ Progress bar calculation:
 
   Knowledge Graph
   ===============
-  {vocabulary.note_plural}:  [NOTE_COUNT]
-  Connections:               [LINK_COUNT] (avg [AVG_LINKS] per {vocabulary.note})
-  {vocabulary.topic_map_plural}:   [MOC_COUNT] (covering [COVERAGE]% of {vocabulary.note_plural})
+  claims:      [NOTE_COUNT]
+  Connections:               [LINK_COUNT] (avg [AVG_LINKS] per claim)
+  topic maps:  [MOC_COUNT] (covering [COVERAGE]% of claims)
   Topics:                    [TOPIC_COUNT]
 
   Health
@@ -279,7 +270,7 @@ Progress bar calculation:
 
   Growth
   ======
-  This week:    +[THIS_WEEK_NOTES] {vocabulary.note_plural}, +[THIS_WEEK_LINKS] connections
+  This week:    +[THIS_WEEK_NOTES] claims, +[THIS_WEEK_LINKS] connections
   Graph density: [DENSITY]
 
   System
@@ -299,14 +290,14 @@ After the stats block, add brief interpretation for any notable findings:
 
 | Condition | Note |
 |-----------|------|
-| ORPHAN_COUNT > 0 | "[N] orphan {vocabulary.note_plural} — run `/graph health` for details" |
+| ORPHAN_COUNT > 0 | "[N] orphan claims — run `/graph health` for details" |
 | DANGLING_COUNT > 0 | "[N] dangling links — run `/graph health` to identify broken links" |
-| COMPLIANCE < 90 | "Schema compliance below 90% — some {vocabulary.note_plural} missing required fields" |
-| OBS_PENDING >= 10 | "[N] pending observations — consider running /{vocabulary.rethink}" |
-| TENSION_PENDING >= 5 | "[N] open tensions — consider running /{vocabulary.rethink}" |
-| DENSITY < 0.02 | "Graph density is low — connections are thin. Run /{vocabulary.cmd_reflect} to strengthen the network" |
-| PROCESSED_PCT < 50 | "More content in inbox than in {vocabulary.notes}/ — consider processing backlog" |
-| THIS_WEEK_NOTES == 0 | "No new {vocabulary.note_plural} this week" |
+| COMPLIANCE < 90 | "Schema compliance below 90% — some claims missing required fields" |
+| OBS_PENDING >= 10 | "[N] pending observations — consider running /rethink" |
+| TENSION_PENDING >= 5 | "[N] open tensions — consider running /rethink" |
+| DENSITY < 0.02 | "Graph density is low — connections are thin. Run /reflect to strengthen the network" |
+| PROCESSED_PCT < 50 | "More content in inbox than in notes/ — consider processing backlog" |
+| THIS_WEEK_NOTES == 0 | "No new claims this week" |
 | MET_ALARMS != "none" | "Metabolic alarms active ([MET_ALARMS]) -- daemon is suppressing generation. Run `/next` for recommended action." |
 
 Only show interpretation notes when conditions are notable. A healthy vault gets just the stats, no warnings.
@@ -320,10 +311,10 @@ If invoked with `--share`, output a compact markdown block suitable for sharing 
 ```markdown
 ## My Knowledge Graph
 
-- **[NOTE_COUNT]** {vocabulary.note_plural} with **[LINK_COUNT]** connections (avg [AVG_LINKS] per {vocabulary.note})
-- **[MOC_COUNT]** {vocabulary.topic_map_plural} covering [COVERAGE]% of {vocabulary.note_plural}
+- **[NOTE_COUNT]** claims with **[LINK_COUNT]** connections (avg [AVG_LINKS] per claim)
+- **[MOC_COUNT]** topic maps covering [COVERAGE]% of claims
 - Schema compliance: [COMPLIANCE]%
-- This week: +[THIS_WEEK_NOTES] {vocabulary.note_plural}, +[THIS_WEEK_LINKS] connections
+- This week: +[THIS_WEEK_NOTES] claims, +[THIS_WEEK_LINKS] connections
 - Graph density: [DENSITY]
 
 *Built with [Ars Contexta](https://github.com/arscontexta) v1.6*
@@ -344,7 +335,7 @@ If previous /stats runs are logged in `ops/stats-history.yaml` (or similar), com
 
 ```
   Trend (vs last check):
-    {vocabulary.note_plural}: [N] (+[delta] since [date])
+    claims: [N] (+[delta] since [date])
     Connections:              [N] (+[delta])
     Density:                  [N] ([up/down/stable])
     Orphans:                  [N] ([improved/worsened/stable])
@@ -366,9 +357,9 @@ Show zeros gracefully:
 
   Knowledge Graph
   ===============
-  {vocabulary.note_plural}:  0
+  claims:  0
   Connections:               0
-  {vocabulary.topic_map_plural}:   0
+  topic maps:  0
   Topics:                    0
 
   Generated with Ars Contexta v1.6 + EngramR v0.6
@@ -384,13 +375,9 @@ Skip the Pipeline section entirely. Do not show an error.
 
 Show "disabled" for self space line. Do not show an error.
 
-### No ops/derivation-manifest.md
-
-Use universal vocabulary (notes, MOCs, etc.). All metrics work identically.
-
 ### Very Large Vault (500+ notes)
 
-The orphan and MOC coverage checks may be slow for large vaults. If {vocabulary.notes}/ has >200 files:
+The orphan and MOC coverage checks may be slow for large vaults. If notes/ has >200 files:
 1. Run orphan detection with a simpler heuristic (check only for presence in any MOC, not full backlink scan)
 2. Note: "Metrics approximate for large vault. Run /graph health for precise analysis."
 

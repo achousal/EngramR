@@ -31,11 +31,8 @@ The vault is organized around three primitives:
 
 Topic maps organize claim clusters into navigable neighborhoods -- attention
 hubs that make the graph browsable without search. Raw input enters through
-a quality pipeline that enforces structure before anything reaches the graph:
-
-```
-inbox/ --> /reduce --> /reflect --> /reweave --> /verify --> notes/
-```
+a quality pipeline that enforces structure before anything reaches the graph
+(see [Workflows](workflows.md) for the full pipeline).
 
 ---
 

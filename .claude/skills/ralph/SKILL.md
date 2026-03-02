@@ -21,10 +21,6 @@ Parse arguments:
 - --dry-run: show what would execute without running
 - --handoff: output structured RALPH HANDOFF block at end (for pipeline chaining)
 
-### Step 0: Read Vocabulary
-
-Read `ops/derivation-manifest.md` (or fall back to `ops/derivation.md`) for domain vocabulary mapping. All output must use domain-native terms. If neither file exists, use universal terms.
-
 **START NOW.** Process queue tasks.
 
 ---
@@ -51,10 +47,10 @@ Each phase maps to specific Task tool parameters. Use these EXACTLY when spawnin
 | Phase | Skill Invoked | Purpose |
 |-------|---------------|---------|
 | extract | /reduce | Extract claims from source material |
-| create | (inline note creation) | Write the {DOMAIN:note} file |
-| enrich | /enrich | Add content to existing {DOMAIN:note} |
-| reflect | /reflect | Find connections, update {DOMAIN:topic map}s |
-| reweave | /reweave | Update older {DOMAIN:note_plural} with new connections |
+| create | (inline note creation) | Write the claim file |
+| enrich | /enrich | Add content to existing claim |
+| reflect | /reflect | Find connections, update topic maps |
+| reweave | /reweave | Update older claims with new connections |
 | verify | /verify | Description quality + schema + health checks |
 
 **All phases use the same subagent configuration:**
@@ -188,7 +184,7 @@ Read the task file at ops/queue/{FILE} for context.
 You are processing task {ID} from the work queue.
 Phase: create | Target claim: {TARGET}
 
-Create a {DOMAIN:note} for this claim in {DOMAIN:notes}/[claim as sentence].md
+Create a claim for this claim in notes/[claim as sentence].md
 Follow note design patterns:
 - YAML frontmatter with description (adds info beyond title), topics
 - Body: 150-400 words showing reasoning with connective words
@@ -205,7 +201,7 @@ You are processing task {ID} from the work queue.
 Phase: enrich | Target: {TARGET}
 
 Run /enrich --handoff using the task file for context.
-The task file specifies which existing {DOMAIN:note} to enrich and what to add.
+The task file specifies which existing claim to enrich and what to add.
 ONE PHASE ONLY. Do NOT run reflect.
 ```
 
@@ -225,9 +221,9 @@ OTHER CLAIMS FROM THIS BATCH (check connections to these alongside regular disco
 {end for, or "None yet" if this is the first claim}
 
 Run /reflect --handoff on: {TARGET}
-Use dual discovery: {DOMAIN:topic map} exploration AND semantic search.
+Use dual discovery: topic map exploration AND semantic search.
 Add inline links where genuine connections exist — including sibling claims listed above.
-Update relevant {DOMAIN:topic map} with this {DOMAIN:note}.
+Update relevant topic map with this claim.
 ONE PHASE ONLY. Do NOT run reweave.
 ```
 
@@ -247,9 +243,9 @@ OTHER CLAIMS FROM THIS BATCH:
 {end for}
 
 Run /reweave --handoff for: {TARGET}
-This is the BACKWARD pass. Find OLDER {DOMAIN:note_plural} AND sibling claims
-that should reference this {DOMAIN:note} but don't.
-Add inline links FROM older {DOMAIN:note_plural} TO this {DOMAIN:note}.
+This is the BACKWARD pass. Find OLDER claims AND sibling claims
+that should reference this claim but don't.
+Add inline links FROM older claims TO this claim.
 ONE PHASE ONLY. Do NOT run verify.
 ```
 
@@ -264,7 +260,7 @@ Run /verify --handoff on: {TARGET}
 Combined verification: recite (cold-read prediction test), validate (schema check),
 review (per-note health).
 IMPORTANT: Recite runs FIRST — read only title+description, predict content,
-THEN read full {DOMAIN:note}.
+THEN read full claim.
 Final phase for this claim. ONE PHASE ONLY.
 ```
 
@@ -419,7 +415,7 @@ SIBLING CLAIMS IN THIS BATCH (link to these where genuine connections exist):
 {end for}
 
 During REFLECT and REWEAVE, check if your claim genuinely connects to any sibling.
-If a sibling {DOMAIN:note} exists in {DOMAIN:notes}/, link to it inline where the
+If a sibling claim exists in notes/, link to it inline where the
 connection is real. If it does not exist yet (still being created), skip —
 cross-connect will catch it after.
 
@@ -427,7 +423,7 @@ Read the task file for full context. Execute phases from current_phase onwards.
 If completed_phases is not empty, skip those phases (resumption mode).
 
 When complete, update the queue entry to status "done" and report the created
-{DOMAIN:note} title, path, and claim ID. The lead needs this for cross-connect.
+claim title, path, and claim ID. The lead needs this for cross-connect.
 ```
 
 Spawn via Task tool:
