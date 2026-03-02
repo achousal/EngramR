@@ -1,0 +1,165 @@
+# Institution Resource Lookup
+
+Reference file for the onboard skill. Extracted from the main onboard SKILL.md Step 2g.
+
+---
+
+## Architecture: Scan vs Orchestrator Split
+
+This reference serves two consumers with different responsibilities:
+
+| Step | Owner | Context | Why |
+|------|-------|---------|-----|
+| Auto-detect institution signals | onboard-scan (fork) | Non-interactive | No wasted lookups on wrong institution |
+| Confirm institution with user | orchestrator (main) | Conversational | User-in-the-loop |
+| Ask for lab website URL | orchestrator (main) | Conversational | User provides URL |
+| WebFetch lab website | orchestrator (main) | After user input | Needs the URL |
+| /learn for departments | orchestrator (main) | After confirmation | Needs confirmed PI + institution |
+| /learn for institutional resources | orchestrator (main) | After confirmation | Needs confirmed institution name |
+| Create institution profile | orchestrator (main) | After enrichment | Needs all merged data |
+
+The scan agent reads sections marked **[SCAN]** below. The orchestrator reads sections marked **[ORCHESTRATOR]**.
+
+---
+
+## Institution Resource Lookup
+
+Use /learn to fetch the institution's full resource catalog (HPC, core facilities, platforms, shared resources). This supplements filesystem-based detection with publicly available institutional information.
+
+### Determine institution [SCAN]
+
+1. Check scan identity signals for institution name (from CLAUDE.md, email domains, HPC cluster names).
+2. Output detected institution with evidence sources. Do NOT ask the user -- the orchestrator handles confirmation.
+3. If no signals found, output "institution: not detected" so the orchestrator can ask.
+
+### Determine departments and affiliations [ORCHESTRATOR]
+
+Runs in the orchestrator's Turn 1b enrichment, after user confirms institution and PI.
+
+1. Launch a sonnet agent: invoke `/learn "{PI Name} {Institution Name} faculty profile departments" --light --no-goals` via the Skill tool.
+2. Parse the /learn output for:
+   - **Department names** -- formal department affiliations (e.g., "Department of Neurology", "Department of Oncological Sciences").
+   - **Center affiliations** -- research centers, institutes, or programs (e.g., "Tisch Cancer Institute", "Alzheimer's Disease Research Center").
+   - **External affiliations** -- institutions outside the primary one (e.g., "James J. Peters VA Medical Center").
+3. For each department found, infer the department `type` at the institution level using these categories:
+   - `basic_science` -- fundamental research departments (e.g., Oncological Sciences, Neuroscience, Microbiology)
+   - `clinical` -- patient-facing or clinical departments (e.g., Neurology, Dermatology, Pathology). Primarily relevant for academic medical centers; non-biomedical domains may not have this type.
+   - `translational` -- bridging basic and applied (e.g., Translational Medicine). Primarily relevant for biomedical research; other domains may use `applied` or similar.
+   - `computational` -- computational or data science (e.g., Artificial Intelligence and Human Health)
+4. Results are merged into scan data and shown in the Turn 1b enrichment summary.
+5. If /learn fails or returns no useful results, the orchestrator asks the user directly.
+
+Store confirmed values as DEPARTMENTS, CENTER_AFFILIATIONS, and EXTERNAL_AFFILIATIONS.
+
+### Confirm detected values [ORCHESTRATOR]
+
+Handled by the orchestrator in Review Turn 1. The scan agent outputs detected values with evidence; the orchestrator presents them to the user for confirmation.
+
+### Lab website lookup (optional) [ORCHESTRATOR]
+
+Runs in the orchestrator's Turn 1b enrichment, after user provides URL in Turn 1.
+
+1. The orchestrator asks for the lab website URL in Turn 1 (alongside "Does this look right?").
+2. If user provides a URL, the orchestrator invokes WebFetch directly:
+   ```
+   WebFetch URL={user URL}
+   Prompt: "Extract the following from this lab website:
+   1. Research focus areas and themes
+   2. Current group members (faculty, postdocs, students)
+   3. Active projects or research programs
+   4. Key publications or highlighted papers
+   5. Lab resources, tools, or databases
+   6. Collaborations mentioned
+   Return as structured sections. Omit any section with no content."
+   ```
+3. Parse WebFetch output into onboard-relevant categories:
+   - `research_themes` -- feeds into project registration context and goal creation
+   - `group_members` -- enriches lab profile (future: collaboration graph)
+   - `active_projects` -- cross-reference against filesystem scan
+   - `resources` -- merge with institutional resources from /learn
+4. Store parsed results as LAB_WEBSITE_DATA.
+5. Store the URL itself as `lab_website_url` for the lab entity node.
+
+**Relationship to /learn:** Lab website fetch and /learn always both run. WebFetch captures the lab's self-presentation (themes, members, active projects). /learn captures institutional context (HPC, core facilities, platforms, department resources). Results are merged in the review presentation.
+
+**Skip conditions (WebFetch only -- /learn always proceeds):**
+- User provides no URL or says skip: skip WebFetch, proceed to /learn.
+- WebFetch fails (timeout, 403, etc.): warn the user, proceed to /learn.
+
+### Generate institution slug [SCAN]
+
+Lowercase, hyphens for spaces, no special characters. Example: `mount-sinai`, `memorial-sloan-kettering`. The scan agent generates this from auto-detected institution name; the orchestrator may update it after user confirmation.
+
+### Check for existing profile [SCAN]
+
+1. Check if `ops/institutions/{institution-slug}.md` already exists.
+2. If yes: read it, feed into presentation. Inform user:
+   ```
+   Loaded existing institution profile: ops/institutions/{slug}.md
+   To refresh from web: rerun with --refresh
+   ```
+   Skip to presentation.
+3. If no: proceed with /learn lookup.
+
+### Invoke /learn [ORCHESTRATOR]
+
+Runs in the orchestrator's Turn 1b enrichment, after user confirms institution.
+
+1. Primary lookup via Skill tool (launched as sonnet agent):
+   ```
+   /learn "{Institution Name} research infrastructure core facilities HPC computing platforms shared resources" --light --no-goals
+   ```
+2. If department was specified, invoke a second lookup:
+   ```
+   /learn "{Institution Name} {Department} research resources laboratories" --light --no-goals
+   ```
+
+### Parse /learn output [ORCHESTRATOR]
+
+1. Read the /learn output file(s) from `inbox/` (filename pattern: `YYYY-MM-DD-*{institution-slug}*.md`).
+2. Extract Key Findings into infrastructure schema categories:
+   - `compute`: HPC clusters, GPU resources, cloud accounts
+   - `core_facilities`: shared instrumentation and service labs relevant to the domain
+   - `platforms`: data management, clinical, and research platforms
+   - `shared_resources`: repositories, archives, registries, or other shared assets relevant to the domain
+3. Extract `source_urls` from the Sources section of the /learn output.
+
+### Create institution profile [ORCHESTRATOR]
+
+Written by the orchestrator after all enrichment data is merged. Uses `_code/templates/institution.md`:
+
+```yaml
+---
+type: "institution"
+name: "{Institution Full Name}"
+slug: "{institution-slug}"
+departments:
+  - name: "{department name}"
+    type: "{basic_science|clinical|translational|computational}"
+centers:
+  - "{center or institute name}"
+compute:
+  - name: "{cluster name}"
+    type: "{HPC|cloud|GPU}"
+    scheduler: "{LSF|SLURM|PBS|...}"
+    notes: "{access notes}"
+core_facilities: ["{parsed facilities}"]
+platforms: ["{parsed platforms}"]
+shared_resources: ["{parsed shared resources}"]
+source_urls: ["{urls from /learn sources}"]
+last_fetched: "{today}"
+created: "{today}"
+updated: "{today}"
+tags: ["institution"]
+---
+```
+
+Department type enum: `basic_science` (fundamental research), `clinical` (patient-facing), `translational` (bridging), `computational` (data/AI). Centers are flat strings.
+
+Populate body sections with details from /learn output, organized under the template headings (Compute Resources, Core Facilities, Platforms and Databases, Shared Resources (e.g., biobanks, cohorts, repositories)).
+
+### Skip conditions
+
+- Institution cannot be determined and user skips the question: skip entirely.
+- User says "I'll fill in manually": skip the lookup, create empty profile for manual editing.
+- `--refresh` flag not present and profile already exists: load existing, skip lookup.

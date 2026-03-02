@@ -1,0 +1,32 @@
+name: "bioinformatics"
+description: "Biomedical research and computational biology"
+version: "1.0"
+
+identity:
+  purpose: "Co-scientist research agent for bioinformatics hypothesis discovery"
+  domain: "Bioinformatics and computational biology"
+  focus_areas:
+    - "biomarker discovery"
+    - "multi-omics integration"
+    - "clinical genomics"
+    - "inflammatory disease mechanisms"
+
+config_overrides:
+  data_layers:
+    - Genomics
+    - Transcriptomics
+    - Proteomics
+    - Metabolomics
+    - Epigenomics
+    - Metagenomics
+    - Clinical/EHR
+    - scRNA-seq
+  research:
+    primary: pubmed
+    fallback: arxiv
+    last_resort: web-search
+
+env_vars:
+  optional:
+    NCBI_API_KEY: "NCBI EUTILS for 10 req/s -- https://www.ncbi.nlm.nih.gov/account/settings/"
+    NCBI_EMAIL: "Required by NCBI API policy"
