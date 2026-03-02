@@ -34,9 +34,9 @@ ls ops/config.yaml ops/derivation.md _code/templates/
 cd _code && uv run pytest tests/ -v --tb=short
 ```
 
-Environment variables required for the co-scientist layer:
-- `NCBI_API_KEY` -- NCBI EUTILS API key (for /literature, optional for non-biomedical domains)
-- `NCBI_EMAIL` -- required by NCBI API policy (if using NCBI)
+Domain-specific API keys depend on your configured profile.
+Common keys: `S2_API_KEY` (Semantic Scholar), `OPENALEX_API_KEY` (OpenAlex),
+`NCBI_API_KEY` + `NCBI_EMAIL` (biomedical). See `_code/README.md` for the full table.
 
 ---
 

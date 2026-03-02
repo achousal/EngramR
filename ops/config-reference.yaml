@@ -31,7 +31,7 @@ dimensions:
                                    # navigation rather than folder hierarchy.
                                    # Scales well to 1000+ notes.
     hierarchical:                  # Notes organized in topic subdirectories
-                                   # (e.g., notes/immunology/, notes/lipids/).
+                                   # (e.g., notes/physics/, notes/methods/).
                                    # Familiar but creates classification decisions
                                    # at write time and cross-cutting claims are
                                    # awkward to place.
@@ -85,7 +85,7 @@ dimensions:
                                    # Good balance of quality and flexibility.
     strict:                        # All fields required. Validation blocks writes
                                    # that lack optional fields. Use for high-rigor
-                                   # domains (clinical, regulatory).
+                                   # domains (clinical, regulatory, legal).
     minimal:                       # Only description required. No validation of
                                    # optional fields. Fast but loose.
 

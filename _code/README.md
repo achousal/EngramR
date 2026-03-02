@@ -169,11 +169,11 @@ Three-tier hierarchy:
 
 ### Analysis deliverables (per _code/styles/STYLE_GUIDE.md)
 
-Every analysis script must produce: figures (PDF), p-value sidecars, stats report (txt), Table 1 (csv+png, if applicable -- typically for cohort-based studies), NA summary (csv, if any missingness). See _code/styles/STYLE_GUIDE.md "Analysis deliverables checklist" for the full table.
+Every analysis script must produce: figures (PDF), p-value sidecars, stats report (txt), Table 1 (domain-specific, csv+png, if applicable -- typically for cohort-based studies), NA summary (csv, if any missingness). See _code/styles/STYLE_GUIDE.md "Analysis deliverables checklist" for the full table.
 
 Key conventions:
 - **n in plots**: always visible -- italic `n=N` at base of distribution plots, inline in scatter annotations
 - **Test names**: always named in the stat annotation box (e.g., "Mann-Whitney p = 0.003")
 - **Stats report**: timestamped txt with settings, sample counts, per-group results
-- **Table 1**: CSV + rendered figure, mean(SD) / n(%), group n in column headers (cohort-based / domain-specific)
+- **Table 1** (domain-specific): CSV + rendered figure, mean(SD) / n(%), group n in column headers (cohort-based)
 - **NA summary**: CSV with variable, group, n_missing, pct_missing, record_ids

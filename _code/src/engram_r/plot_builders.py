@@ -450,7 +450,13 @@ def build_roc(
     fig, ax = plt.subplots(figsize=figsize)
 
     if y_true is not None and y_score is not None:
-        from sklearn.metrics import roc_curve
+        try:
+            from sklearn.metrics import roc_curve
+        except ImportError:
+            raise ImportError(
+                "scikit-learn is required for ROC curve computation. "
+                "Install it with: uv pip install engram-r[ml]"
+            ) from None
 
         fpr_arr, tpr_arr, _ = roc_curve(y_true, y_score)
         ax.plot(fpr_arr, tpr_arr, linewidth=0.8)

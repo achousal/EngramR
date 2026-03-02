@@ -122,34 +122,70 @@ Wait for user response. Apply corrections.
 
 ### Turn 1b: Context Enrichment (automatic)
 
-After user confirms Turn 1, enrich context before presenting projects. Goal: fill maximum institutional context. Two phases: parallel batch, then a sequential follow-up.
+After user confirms Turn 1, enrich context before presenting projects. Goal: fill maximum institutional context without redundant lookups.
 
 Read `reference/enrichment-agents.md` for the full agent prompt templates referenced below. Each agent invokes /learn via Skill tool, reads the filed inbox results, and returns structured output.
 
+#### Institution-Aware Gate
+
+Before launching any enrichment agents, check the scan output for an existing institution profile:
+
+1. If scan reports `Institution Profile: ops/institutions/{slug}.md` (profile exists):
+   - Read the profile. Populate Turn 1 fields (departments, centers, compute, facilities) FROM the existing profile.
+   - **Skip A2** (departments already known) and **A3** (infrastructure already known).
+   - **Skip B1** unless user corrected departments in Turn 1 or added new ones.
+   - **Always run A1** (lab-specific: website + /learn for THIS lab's profile, which differs per PI).
+   - After Turn 1 confirmation, check if user added departments or centers not in the profile. If so, run the **merge step** (see `reference/institution-lookup.md`, "Merge into existing profile").
+
+2. If scan reports no existing profile (first lab at this institution):
+   - Run full enrichment (A1 + A2 + A3 + B1) as below.
+
+3. If `--refresh` flag is set:
+   - Ignore existing profile. Run full enrichment and overwrite the profile.
+
+#### Cross-Lab Detection
+
+After loading the scan results, grep for other labs at the same institution:
+
+```
+Grep pattern: "institution:.*{Institution Name}" path: projects/ glob: "*/_index.md"
+```
+
+If other labs found, note them for Turn 3 (cross-lab connections). Present in Turn 1:
+
+```
+Also at {Institution Name}: {other lab names} (already onboarded)
+```
+
 #### Phase A (parallel)
 
-Launch all available enrichment steps simultaneously via a single message with multiple tool calls.
+Launch all available enrichment steps simultaneously via a single message with multiple tool calls. Respect the institution-aware gate above -- skip agents whose data is already in the profile.
 
 - **A1. Lab profile** (always runs; URL optional): Launch agent using A1 template from `reference/enrichment-agents.md`. Does WebFetch of lab URL (if provided) + /learn for broader lab context. Substitute `{PI Name}`, `{Institution Name}`, `{lab_website_url}`.
-- **A2. Departments** (if Departments or Centers show "--"): Launch agent using A2 template from `reference/enrichment-agents.md`. Substitute `{PI Name}` and `{Institution Name}`.
-- **A3. Institutional resources** (if scan produced thin infrastructure): Launch agent using A3 template from `reference/enrichment-agents.md`. Substitute `{Institution Name}` and `{domain}`.
+- **A2. Departments** (skip if profile loaded; run if Departments show "--" and no profile): Launch agent using A2 template from `reference/enrichment-agents.md`. Substitute `{PI Name}` and `{Institution Name}`.
+- **A3. Institutional resources** (skip if profile loaded; run if thin infrastructure and no profile): Launch agent using A3 template from `reference/enrichment-agents.md`. Substitute `{Institution Name}` and `{domain}`.
 
 #### Phase B (sequential, after Phase A)
 
-- **B1. Department-specific resources** (only if A2 returned departments): Parse department names from A2 output. Launch agent(s) using B1 template from `reference/enrichment-agents.md`. Limit to 2 most relevant departments. Run in parallel if multiple.
+- **B1. Department-specific resources** (only if A2 returned NEW departments not in existing profile): Parse department names from A2 output. Launch agent(s) using B1 template from `reference/enrichment-agents.md`. Limit to 2 most relevant departments. Run in parallel if multiple.
 
 #### Merge and Present
 
-Merge enrichment results into scan data. Deduplicate against filesystem-detected infrastructure.
+Merge enrichment results into scan data. Deduplicate against filesystem-detected infrastructure and existing institution profile.
+
+If an existing institution profile was loaded and new departments or resources were discovered, update the profile (see `reference/institution-lookup.md`, "Merge into existing profile").
 
 ```
 === Context Enrichment ===
 
+{if profile loaded}: Institution profile loaded: ops/institutions/{slug}.md ({N} departments, {N} facilities).
 {if lab website}: Lab website: {N} research themes, {N} group members, {N} projects found.
-{if departments}: Departments: {list with types}. Centers: {list}.
+{if departments NEW}: New departments: {list with types}. Merged into institution profile.
+{if departments LOADED}: Departments: {list with types} (from profile). Centers: {list}.
 {if external}: External affiliations: {list}.
-{if institutional}: Infrastructure: {N} compute, {N} core facilities, {N} platforms, {N} shared resources.
+{if institutional NEW}: Infrastructure: {N} compute, {N} core facilities, {N} platforms, {N} shared resources.
 {if dept-specific}: Department resources: {summary per department}.
+{if cross-lab}: Cross-lab: {other labs at same institution}.
 
 Enriched fields will inform project registration and goal creation.
 ```
@@ -194,11 +230,23 @@ Platform details will populate data-inventory.md entries.
 
 Proceed to Turn 3.
 
-### Turn 3: Cross-lab connections (multi-lab only)
+### Turn 3: Cross-lab connections
 
-If onboarding multiple labs, present detected cross-lab connections after all labs reviewed.
+If cross-lab detection (Turn 1b) found other labs at the same institution, OR if onboarding multiple labs in one session, present connections:
+
+```
+=== Cross-Lab Connections ===
+
+Labs at {Institution Name}:
+  - {this lab} (onboarding now)
+  - {other lab} (onboarded {date})
+
+Shared: {institution profile}, {shared departments}, {shared infrastructure}
+```
 
 Ask: "Any connections I missed between labs?"
+
+If no other labs detected, skip this turn silently.
 
 ### Turn 4: Strategy (optional)
 

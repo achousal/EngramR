@@ -11,12 +11,15 @@ This reference serves two consumers with different responsibilities:
 | Step | Owner | Context | Why |
 |------|-------|---------|-----|
 | Auto-detect institution signals | onboard-scan (fork) | Non-interactive | No wasted lookups on wrong institution |
+| Check for existing profile | onboard-scan (fork) | Non-interactive | Load existing data, skip redundant lookups |
 | Confirm institution with user | orchestrator (main) | Conversational | User-in-the-loop |
 | Ask for lab website URL | orchestrator (main) | Conversational | User provides URL |
-| WebFetch lab website | orchestrator (main) | After user input | Needs the URL |
-| /learn for departments | orchestrator (main) | After confirmation | Needs confirmed PI + institution |
-| /learn for institutional resources | orchestrator (main) | After confirmation | Needs confirmed institution name |
-| Create institution profile | orchestrator (main) | After enrichment | Needs all merged data |
+| Institution-aware gate | orchestrator (main) | Before enrichment | Skip A2/A3 if profile exists |
+| Cross-lab detection | orchestrator (main) | Before enrichment | Grep for other labs at same institution |
+| /learn for departments | orchestrator (main) | After confirmation | Only if no existing profile |
+| /learn for institutional resources | orchestrator (main) | After confirmation | Only if no existing profile |
+| Create institution profile | orchestrator (main) | After enrichment | First lab at this institution |
+| Merge into existing profile | orchestrator (main) | After enrichment | Second+ lab: append new departments/centers |
 
 The scan agent reads sections marked **[SCAN]** below. The orchestrator reads sections marked **[ORCHESTRATOR]**.
 
@@ -158,8 +161,42 @@ Department type enum: `basic_science` (fundamental research), `clinical` (patien
 
 Populate body sections with details from /learn output, organized under the template headings (Compute Resources, Core Facilities, Platforms and Databases, Shared Resources (e.g., biobanks, cohorts, repositories)).
 
+### Merge into existing profile [ORCHESTRATOR]
+
+When onboarding a second (or later) lab at the same institution, the existing profile is loaded but may need updates. This step runs after Turn 1 confirmation if the user corrected or added departments/centers, or if A2 enrichment returned new departments not in the profile.
+
+**Merge rules:**
+
+1. **Departments**: Append any departments not already in the profile's `departments:` list. Match by name (case-insensitive). Do not remove existing departments.
+2. **Centers**: Append any centers not already in the profile's `centers:` list. Match by name substring. Do not remove existing centers.
+3. **Compute/facilities/platforms**: Only add if genuinely new (not already listed). Infrastructure at the institution level rarely changes between labs.
+4. **source_urls**: Append new source URLs from enrichment.
+5. **updated**: Set to today's date.
+6. **last_fetched**: Only update if new /learn lookups were performed.
+
+**Confirmation**: Before writing the merged profile, present the diff to the user:
+
+```
+Institution profile update: ops/institutions/{slug}.md
+
+Adding:
+  Departments: + {new department} ({type})
+  Centers: + {new center}
+  {other additions}
+
+No existing data will be removed. Proceed?
+```
+
+Wait for user approval before writing.
+
+**Provenance**: Add a comment in the profile body noting the merge:
+
+```
+<!-- Merged from {lab-slug} onboard: {date} -->
+```
+
 ### Skip conditions
 
 - Institution cannot be determined and user skips the question: skip entirely.
 - User says "I'll fill in manually": skip the lookup, create empty profile for manual editing.
-- `--refresh` flag not present and profile already exists: load existing, skip lookup.
+- `--refresh` flag not present and profile already exists: load existing, skip lookup (but merge step may still run if new departments found).

@@ -116,7 +116,7 @@ research:
 # Controls which backends /literature uses for structured searches.
 # ---------------------------------------------------------------------------
 literature:
-  sources: [pubmed, arxiv, semantic_scholar, openalex]
+  sources: [arxiv, semantic_scholar, openalex]
   default: all              # all: query every enabled source
                             # Or a single source name from the list above
 

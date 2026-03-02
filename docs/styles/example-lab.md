@@ -31,18 +31,16 @@ Access: `lab_palette("example")` (R) or `get_lab_palette("example")` (Python).
 
 ## Semantic mappings
 
-Inherits universal semantic palettes. These map biological categories to fixed colors for consistency across all projects.
+Inherits universal semantic palettes. These map domain categories to fixed colors for consistency across all projects. Domain-specific semantic mappings (e.g., biomedical Sex/Diagnosis palettes) are defined in `_code/profiles/bioinformatics/` and similar profile directories.
 
-| Mapping | Category | Hex | Scale helpers |
-|---------|----------|-----|---------------|
-| Sex | Male | `#377EB8` (blue) | `scale_color_sex()`, `scale_fill_sex()` |
-| Sex | Female | `#E41A1C` (red) | |
-| Diagnosis | P- | `#4DAF4A` (green) | `scale_color_dx()`, `scale_fill_dx()` |
-| Diagnosis | P+ | `#E41A1C` (red) | |
-| Binary | Control | `#4DAF4A` (green) | |
-| Binary | Case | `#E41A1C` (red) | |
+| Mapping | Category | Hex | Notes |
+|---------|----------|-----|-------|
+| Direction | Up | `#E41A1C` (red) | Universal -- increase/alert |
+| Direction | Down | `#377EB8` (blue) | Universal -- decrease/baseline |
+| Binary | Control | `#4DAF4A` (green) | Universal -- reference group |
+| Binary | Case | `#E41A1C` (red) | Universal -- experimental group |
 
-Semantic colors are drawn from ColorBrewer Set1 (shared across all labs). Red signals "attention" (female, positive diagnosis, case); blue/green signals "baseline" (male, negative diagnosis, control).
+Profile-specific palettes (e.g., Sex, Diagnosis) are loaded from `palettes.yaml` in the active domain profile. See `_code/profiles/` for examples.
 
 ## Heatmap palettes
 

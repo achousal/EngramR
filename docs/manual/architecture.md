@@ -67,8 +67,8 @@ into the hypothesis pool, reshaping the leaderboard.
 | **Lifecycle**   | Evolves as the lab learns    | Generated, debated, ranked, evolved | Has timeline, budget, deliverables  |
 | **Elo applies** | Organizes the leaderboard    | Yes -- compete head-to-head         | No -- projects execute, not compete |
 
-A goal like "Identify early predictors of treatment response" spawns
-hypotheses like "Baseline variability predicts six-month outcome," which
+A goal like "Identify early indicators of system degradation" spawns
+hypotheses like "Initial variability predicts six-month trend," which
 spawns a project to run that analysis on a specific dataset.
 
 ---

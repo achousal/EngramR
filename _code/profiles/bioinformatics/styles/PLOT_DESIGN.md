@@ -124,3 +124,31 @@ All outputs saved as PDF (vector format). Primary output directories:
 - `results/cog_amyloid/` (NFL_cog.R)
 - `results/NFL_angio_amyloid/` (NFL_angio.R)
 - `results/GFAP_NfL_amyloid/` (NFL_GFAP_Angio.R)
+
+## Table 1 (cohort summary)
+
+Every project with a defined cohort produces a Table 1. This is the standard demographic/clinical summary that grounds the analysis.
+
+### Structure
+
+| Section | Variables | Format |
+|---------|-----------|--------|
+| Demographics | Age, Sex, Race/Ethnicity, BMI | continuous: `mean (SD)`; categorical: `n (%)` |
+| Clinical | markers, eGFR, creatinine, etc. | continuous: `mean (SD)` |
+| Comorbidities | diabetes, hypertension, etc. | binary: `n (%)` |
+
+### Column layout
+
+- One column per group: `"Group A (n = X)"`, `"Group B (n = Y)"`.
+- n embedded directly in the column header.
+- Optional SMD column (standardized mean difference) for balance assessment.
+- Section headers as row separators (bold or shaded).
+
+### Output formats
+
+- **CSV** (machine-readable, version-controlled): `results/tables/table1.csv`
+- **Rendered figure** (manuscript-ready): `results/tables/table1.png` + `.svg`
+
+### Implementation reference
+
+The reference implementation is `make_table1(df, output_path)` (Python, `analysis/table1.py`). For R projects, use `gtsummary::tbl_summary()` or `tableone::CreateTableOne()` to produce equivalent output.

@@ -95,8 +95,9 @@ bare `id` columns. `auto_redact(df)` replaces flagged column values with
 **Free text** -- `redact_text()` / `scrub_outbound()` catches SSN format,
 email addresses, and US phone numbers in plain text.
 
-Domain profiles can extend these patterns (e.g., `pii_patterns.yaml` in the
-bioinformatics profile adds MRN and patient name patterns for biomedical data).
+Domain profiles can extend these patterns (e.g., the bioinformatics profile adds
+MRN and patient name patterns for biomedical data; a social science profile
+might add participant codes). See `pii_patterns.yaml` in each profile.
 
 PII scrubbing is applied automatically:
 - Before every Slack notification (`slack_notify.py`)

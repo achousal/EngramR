@@ -200,31 +200,7 @@ report_path.write_text("\n".join(lines), encoding="utf-8")
 
 ## Table 1 (cohort summary)
 
-Every project with a defined cohort produces a Table 1. This is the standard demographic/clinical summary that grounds the analysis.
-
-### Structure
-
-| Section | Variables | Format |
-|---------|-----------|--------|
-| Demographics | Age, Sex, Race/Ethnicity, BMI | continuous: `mean (SD)`; categorical: `n (%)` |
-| Clinical | markers, eGFR, creatinine, etc. | continuous: `mean (SD)` |
-| Comorbidities | diabetes, hypertension, etc. | binary: `n (%)` |
-
-### Column layout
-
-- One column per group: `"Group A (n = X)"`, `"Group B (n = Y)"`.
-- n embedded directly in the column header.
-- Optional SMD column (standardized mean difference) for balance assessment.
-- Section headers as row separators (bold or shaded).
-
-### Output formats
-
-- **CSV** (machine-readable, version-controlled): `results/tables/table1.csv`
-- **Rendered figure** (manuscript-ready): `results/tables/table1.png` + `.svg`
-
-### Implementation reference
-
-The reference implementation is `make_table1(df, output_path)` (Python, `analysis/table1.py`). For R projects, use `gtsummary::tbl_summary()` or `tableone::CreateTableOne()` to produce equivalent output.
+Cohort summary tables follow conventions defined in the active domain profile's `styles/PLOT_DESIGN.md`. See `_code/profiles/` for examples. The general format is one column per group with n in the header, continuous variables as `mean (SD)`, and categorical variables as `n (%)`.
 
 ## NA summary report
 
@@ -235,7 +211,7 @@ When missingness is non-trivial (any variable with >0% NA after filtering), prod
 | Column | Description |
 |--------|-------------|
 | `variable` | Column name |
-| `group` | Cohort group (e.g., CKD, Control) |
+| `group` | Cohort group (e.g., Group A, Control) |
 | `n_missing` | Count of NAs |
 | `pct_missing` | Percentage missing |
 | `record_ids` | Semicolon-separated IDs of affected records |

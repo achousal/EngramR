@@ -65,11 +65,15 @@ Edit `.env` with your API keys:
 
 | Variable | Required | Where to get it |
 |----------|----------|-----------------|
+| `S2_API_KEY` | For /literature (Semantic Scholar) | [Semantic Scholar API](https://www.semanticscholar.org/product/api) |
+| `OPENALEX_API_KEY` | For /literature (OpenAlex) | [OpenAlex API](https://openalex.org/) |
 | `NCBI_API_KEY` | For /literature (biomedical) | [NCBI Account Settings](https://www.ncbi.nlm.nih.gov/account/settings/) |
 | `NCBI_EMAIL` | For /literature (biomedical) | Required by NCBI API policy |
 | `SLACK_BOT_TOKEN` | For Slack | Bot User OAuth Token from your Slack app (starts with `xoxb-`) |
 | `SLACK_DEFAULT_CHANNEL` | For Slack | Channel ID for notifications (find in channel details) |
 | `SLACK_TEAM_ID` | For Slack | Workspace Team ID (the `T...` segment in Slack URLs) |
+
+> **Domain profiles:** After setup, select a domain profile in `ops/config.yaml` under `domain.name` to enable domain-specific search backends, data layers, and confounders. See `_code/profiles/` for available profiles.
 
 ### 3. Install Python dependencies
 

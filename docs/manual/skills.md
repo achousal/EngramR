@@ -168,7 +168,7 @@ Run exploratory data analysis with PII auto-redaction and themed plots.
 | Reads | User-provided dataset |
 | Writes | eda-reports/, eda-reports/_index.md |
 
-Auto-redacts PII columns (SubjectID, PatientName, SSN, Email, etc., plus profile-specific patterns) before analysis. Computes summary statistics, correlations, distribution properties. Generates themed plots (histograms, correlation heatmap, missing data chart). Saves report to vault.
+Auto-redacts PII columns (SubjectID, PersonName, SSN, Email, etc., plus profile-specific patterns) before analysis. Computes summary statistics, correlations, distribution properties. Generates themed plots (histograms, correlation heatmap, missing data chart). Saves report to vault.
 
 ---
 
@@ -181,7 +181,7 @@ Generate publication-quality figures using the canonical research theme.
 | Reads | User-provided data, `_code/styles/STYLE_GUIDE.md`, `_code/styles/PLOT_DESIGN.md`, profile `styles/PLOT_DESIGN.md` |
 | Writes | User-specified output directory (PDF figures) |
 
-Applies the research theme (14pt base, bold titles, grey90 strips, bottom legend, left+bottom spines). Uses semantic color palettes (sex, diagnosis, direction, significance). Outputs PDF vector by default, 300 DPI raster.
+Applies the research theme (14pt base, bold titles, grey90 strips, bottom legend, left+bottom spines). Uses semantic color palettes (direction, significance, binary, plus profile-specific palettes). Outputs PDF vector by default, 300 DPI raster.
 
 ---
 

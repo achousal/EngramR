@@ -293,8 +293,8 @@ directories in `_code/profiles/`. A profile bundles:
 | `styles/PLOT_DESIGN.md` | Domain-specific plot geometry overrides |
 | `styles/{lab}.md` | Per-lab accent colors and palette policies |
 
-The `bioinformatics` profile is the reference implementation. It enables
-PubMed + arXiv + Semantic Scholar + OpenAlex search, recognizes 8 omics
+The `bioinformatics` profile is the bundled example profile. It enables
+PubMed + arXiv + Semantic Scholar + OpenAlex search, recognizes 8 data
 modalities, and ships with confounder templates for each. Other domains can
 define entirely different search backends, data layers, and confounders.
 
