@@ -36,6 +36,7 @@ Thumbs.db
 
 # Session transcripts and daemon operational data
 ops/sessions/
+_code/ops/sessions/
 ops/daemon/logs/
 ops/daemon/markers/
 ops/daemon/.daemon.pid
