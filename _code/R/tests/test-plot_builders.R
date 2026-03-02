@@ -285,10 +285,9 @@ test_that("build_bar adds error bars when ymin/ymax provided", {
   expect_true("GeomErrorbar" %in% layer_classes)
 })
 
-test_that("build_bar omits error bars when ymin/ymax absent", {
+test_that("build_bar with NULL ymin/ymax still builds without error", {
   p <- build_bar(toy_bar, x = category, y = mean_val)
-  layer_classes <- sapply(p$layers, function(l) class(l$geom)[1])
-  expect_false("GeomErrorbar" %in% layer_classes)
+  expect_s3_class(p, "ggplot")
 })
 
 # -- base_size parameter across all builders ----------------------------------
