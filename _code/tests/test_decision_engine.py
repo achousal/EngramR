@@ -651,3 +651,35 @@ class TestMultiAlarmMetabolicCascade:
         # Orphans have higher count (20 vs 5), should win
         assert rec.priority == "session"
         assert "/reflect" in rec.action or "/ralph" in rec.action
+
+
+# ---------------------------------------------------------------------------
+# Queue blocked signal
+# ---------------------------------------------------------------------------
+
+
+class TestQueueBlockedSignal:
+    def test_queue_blocked_signal(self, clean_state, default_config):
+        """queue_blocked > 0 produces a multi-session signal."""
+        clean_state.queue_blocked = 5
+        signals = classify_signals(clean_state, default_config)
+        blocked = [s for s in signals if s.name == "queue_blocked"]
+        assert len(blocked) == 1
+        assert blocked[0].speed == "multi_session"
+        assert blocked[0].count == 5
+        assert "/literature" in blocked[0].action
+        assert "unpopulated stubs" in blocked[0].rationale
+
+    def test_no_queue_blocked_signal_when_zero(self, clean_state, default_config):
+        """queue_blocked == 0 produces no signal."""
+        clean_state.queue_blocked = 0
+        signals = classify_signals(clean_state, default_config)
+        blocked = [s for s in signals if s.name == "queue_blocked"]
+        assert blocked == []
+
+    def test_state_summary_includes_queue_blocked(self):
+        """_build_state_summary includes queue_blocked key."""
+        state = VaultState(queue_blocked=7)
+        summary = _build_state_summary(state)
+        assert "queue_blocked" in summary
+        assert summary["queue_blocked"] == 7

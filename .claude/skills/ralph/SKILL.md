@@ -25,6 +25,29 @@ Parse arguments:
 
 ---
 
+## Step 0: Queue Health Advisory
+
+Before processing, check for blocked stubs among reduce-phase tasks:
+
+1. Read the queue file and count tasks where `status == "pending"` AND `current_phase == "reduce"` AND the source file is missing or is a stub (both `## Key Points` and `## Relevance` sections are empty).
+2. If blocked stubs are found, print an advisory (never block):
+
+```
+[Advisory] N reduce-phase tasks are blocked on unpopulated literature stubs.
+Recommended: run /literature to populate stubs before processing.
+```
+
+3. If reweave-phase tasks coexist with blocked reduce stubs, add ordering guidance:
+
+```
+[Advisory] Reweave tasks will produce better connections after stub population.
+Recommended order: /literature (populate stubs) -> /ralph (reduce) -> /ralph (reweave)
+```
+
+4. **Always continue to Step 1.** This step is advisory only -- never abort processing.
+
+---
+
 ## MANDATORY CONSTRAINT: SUBAGENT SPAWNING IS NOT OPTIONAL
 
 **You MUST use the Task tool to spawn a subagent for EVERY task. No exceptions.**
@@ -118,7 +141,7 @@ Show this and STOP (do not process):
 ```
 --=={ ralph dry-run }==--
 
-Queue: X total tasks (Y pending, Z done)
+Queue: X total tasks (Y pending, Z done, B blocked on stubs)
 
 Phase distribution:
   Claims:       {create: N, reflect: N, reweave: N, verify: N}

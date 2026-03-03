@@ -10,8 +10,8 @@ import yaml
 
 from engram_r.arxiv import ArxivArticle
 from engram_r.crossref import CrossRefMetadata
-from engram_r.pubmed import PubMedArticle
 from engram_r.literature_types import ArticleResult
+from engram_r.pubmed import PubMedArticle
 from engram_r.search_interface import (
     SearchResult,
     _check_doi_duplicate,
@@ -22,6 +22,7 @@ from engram_r.search_interface import (
     _resolve_enrichment_config,
     check_literature_readiness,
     create_notes_from_results,
+    create_queue_entries,
     resolve_literature_sources,
     resolve_search_backends,
     save_results_json,
@@ -1239,3 +1240,263 @@ class TestCreateNotesFromResults:
         assert len(created) == 1
         assert created[0]["status"] == "created"
         assert output_dir.exists()
+
+    def test_abstract_status_full(self, tmp_path: Path):
+        """Note with full abstract (>=200 chars) gets abstract_status='full'."""
+        import json
+
+        data = [
+            {
+                "source_id": "PMID:999",
+                "title": "Paper with full abstract",
+                "authors": ["Full F"],
+                "abstract": "A" * 250,
+                "year": 2024,
+                "doi": "10.1/full-abstract",
+                "source_type": "pubmed",
+                "url": "",
+                "journal": "Full Journal",
+                "categories": [],
+                "pdf_url": "",
+                "citation_count": 10,
+                "raw_metadata": {},
+            },
+        ]
+        json_path = tmp_path / "results.json"
+        json_path.write_text(json.dumps(data))
+        output_dir = tmp_path / "literature"
+        output_dir.mkdir()
+
+        created = create_notes_from_results(json_path, [1], str(output_dir))
+        assert created[0]["abstract_status"] == "full"
+
+    @patch("engram_r.pubmed.fetch_abstract_by_doi", return_value=None)
+    def test_abstract_status_empty(self, _mock_pubmed, tmp_path: Path):
+        """Note with empty abstract and no fallback gets abstract_status='empty'."""
+        import json
+
+        data = [
+            {
+                "source_id": "S2:333",
+                "title": "Paper with no abstract",
+                "authors": ["NoAbstract N"],
+                "abstract": "",
+                "year": 2024,
+                "doi": "10.1/no-abstract",
+                "source_type": "semantic_scholar",
+                "url": "",
+                "journal": "Some Journal",
+                "categories": [],
+                "pdf_url": "",
+                "citation_count": 0,
+                "raw_metadata": {},
+            },
+        ]
+        json_path = tmp_path / "results.json"
+        json_path.write_text(json.dumps(data))
+        output_dir = tmp_path / "literature"
+        output_dir.mkdir()
+
+        created = create_notes_from_results(json_path, [1], str(output_dir))
+        assert created[0]["abstract_status"] == "empty"
+        assert created[0]["status"] == "created"
+
+    @patch(
+        "engram_r.pubmed.fetch_abstract_by_doi",
+        return_value="Recovered abstract from PubMed via DOI lookup. " + "X" * 200,
+    )
+    def test_abstract_status_pubmed_fallback(self, _mock_pubmed, tmp_path: Path):
+        """Empty abstract filled by PubMed fallback gets pubmed_fallback status."""
+        import json
+
+        data = [
+            {
+                "source_id": "S2:444",
+                "title": "Paper recovered by PubMed",
+                "authors": ["Recovery R"],
+                "abstract": "",
+                "year": 2024,
+                "doi": "10.1/recovered",
+                "source_type": "semantic_scholar",
+                "url": "",
+                "journal": "Neurology",
+                "categories": [],
+                "pdf_url": "",
+                "citation_count": 5,
+                "raw_metadata": {},
+            },
+        ]
+        json_path = tmp_path / "results.json"
+        json_path.write_text(json.dumps(data))
+        output_dir = tmp_path / "literature"
+        output_dir.mkdir()
+
+        created = create_notes_from_results(json_path, [1], str(output_dir))
+        assert created[0]["abstract_status"] == "pubmed_fallback"
+        note_content = Path(created[0]["path"]).read_text()
+        assert "Recovered abstract from PubMed" in note_content
+
+    def test_abstract_status_short(self, tmp_path: Path):
+        """Abstract shorter than 200 chars gets abstract_status='short'."""
+        import json
+
+        data = [
+            {
+                "source_id": "PMID:555",
+                "title": "Paper with short abstract",
+                "authors": ["Short S"],
+                "abstract": "Very brief.",
+                "year": 2024,
+                "doi": "10.1/short",
+                "source_type": "pubmed",
+                "url": "",
+                "journal": "Brief Reports",
+                "categories": [],
+                "pdf_url": "",
+                "citation_count": 1,
+                "raw_metadata": {},
+            },
+        ]
+        json_path = tmp_path / "results.json"
+        json_path.write_text(json.dumps(data))
+        output_dir = tmp_path / "literature"
+        output_dir.mkdir()
+
+        created = create_notes_from_results(json_path, [1], str(output_dir))
+        assert created[0]["abstract_status"] == "short"
+
+
+# ---------------------------------------------------------------------------
+# _fill_missing_abstracts -- PubMed fallback
+# ---------------------------------------------------------------------------
+
+
+class TestFillMissingAbstractsPubMedFallback:
+    """Test PubMed fallback when S2 fails in _fill_missing_abstracts."""
+
+    @patch("engram_r.search_interface.urllib.request.urlopen")
+    @patch(
+        "engram_r.pubmed.fetch_abstract_by_doi",
+        return_value="Abstract from PubMed.",
+    )
+    def test_pubmed_fallback_after_s2_failure(self, mock_pubmed, mock_urlopen):
+        """When S2 raises, falls back to PubMed."""
+        mock_urlopen.side_effect = Exception("S2 timeout")
+        result = _make_result(doi="10.1/fallback", abstract="")
+        _fill_missing_abstracts([result])
+        assert result.abstract == "Abstract from PubMed."
+        mock_pubmed.assert_called_once()
+
+    @patch("engram_r.search_interface.urllib.request.urlopen")
+    @patch("engram_r.pubmed.fetch_abstract_by_doi", return_value=None)
+    def test_stays_empty_when_both_fail(self, mock_pubmed, mock_urlopen):
+        """When both S2 and PubMed fail, abstract stays empty."""
+        mock_urlopen.side_effect = Exception("S2 timeout")
+        result = _make_result(doi="10.1/both-fail", abstract="")
+        _fill_missing_abstracts([result])
+        assert result.abstract == ""
+
+    @patch("engram_r.search_interface.urllib.request.urlopen")
+    @patch("engram_r.pubmed.fetch_abstract_by_doi")
+    def test_s2_success_skips_pubmed(self, mock_pubmed, mock_urlopen):
+        """When S2 succeeds, PubMed is never called."""
+        import io
+        import json as _json
+
+        response_data = _json.dumps({"abstract": "S2 abstract."}).encode()
+        mock_response = io.BytesIO(response_data)
+        mock_urlopen.return_value.__enter__ = lambda s: mock_response
+        mock_urlopen.return_value.__exit__ = lambda s, *a: None
+
+        result = _make_result(doi="10.1/s2-ok", abstract="")
+        _fill_missing_abstracts([result])
+        mock_pubmed.assert_not_called()
+        assert result.abstract == "S2 abstract."
+
+
+# ---------------------------------------------------------------------------
+# create_queue_entries
+# ---------------------------------------------------------------------------
+
+
+class TestCreateQueueEntries:
+    """Test queue entry creation from create_notes_from_results output."""
+
+    def test_creates_entries_for_created_notes(self, tmp_path: Path):
+        queue_path = tmp_path / "queue.json"
+        notes = [
+            {"path": "/vault/_research/literature/2024-smith-test.md",
+             "status": "created", "title": "Test", "doi": "10.1/a"},
+            {"path": "/vault/_research/literature/2024-jones-test.md",
+             "status": "created", "title": "Test 2", "doi": "10.1/b"},
+        ]
+        entries = create_queue_entries(notes, queue_path, vault_root="/vault")
+        assert len(entries) == 2
+        assert entries[0]["id"] == "extract-2024-smith-test"
+        assert entries[0]["source"] == "_research/literature/2024-smith-test.md"
+        assert entries[0]["status"] == "pending"
+        assert entries[0]["current_phase"] == "reduce"
+
+    def test_skips_non_created_notes(self, tmp_path: Path):
+        queue_path = tmp_path / "queue.json"
+        notes = [
+            {"path": "/vault/lit/a.md", "status": "created", "doi": "10.1/a"},
+            {"path": "/vault/lit/b.md",
+             "status": "skipped: duplicate", "doi": "10.1/b"},
+            {"path": "/vault/lit/c.md", "status": "error: out of range", "doi": ""},
+        ]
+        entries = create_queue_entries(notes, queue_path, vault_root="/vault")
+        assert len(entries) == 1
+        assert entries[0]["source"] == "lit/a.md"
+
+    def test_deduplicates_against_existing_queue(self, tmp_path: Path):
+        import json
+
+        queue_path = tmp_path / "queue.json"
+        queue_path.write_text(json.dumps([
+            {"id": "extract-existing", "source": "lit/existing.md", "status": "done"},
+        ]))
+
+        notes = [
+            {"path": "/vault/lit/existing.md", "status": "created", "doi": "10.1/x"},
+            {"path": "/vault/lit/new.md", "status": "created", "doi": "10.1/y"},
+        ]
+        entries = create_queue_entries(notes, queue_path, vault_root="/vault")
+        assert len(entries) == 1
+        assert entries[0]["source"] == "lit/new.md"
+
+    def test_creates_queue_file_if_missing(self, tmp_path: Path):
+        queue_path = tmp_path / "sub" / "queue.json"
+        notes = [
+            {"path": "/vault/lit/a.md", "status": "created", "doi": "10.1/a"},
+        ]
+        entries = create_queue_entries(notes, queue_path, vault_root="/vault")
+        assert len(entries) == 1
+        assert queue_path.exists()
+
+    def test_empty_notes_writes_no_entries(self, tmp_path: Path):
+        queue_path = tmp_path / "queue.json"
+        entries = create_queue_entries([], queue_path)
+        assert entries == []
+        assert queue_path.exists()
+
+    def test_no_vault_root_stores_absolute_paths(self, tmp_path: Path):
+        queue_path = tmp_path / "queue.json"
+        notes = [
+            {"path": "/abs/path/to/note.md", "status": "created", "doi": "10.1/a"},
+        ]
+        entries = create_queue_entries(notes, queue_path, vault_root=None)
+        assert entries[0]["source"] == "/abs/path/to/note.md"
+
+    def test_persists_to_disk(self, tmp_path: Path):
+        import json
+
+        queue_path = tmp_path / "queue.json"
+        notes = [
+            {"path": "/vault/lit/a.md", "status": "created", "doi": "10.1/a"},
+        ]
+        create_queue_entries(notes, queue_path, vault_root="/vault")
+
+        queue = json.loads(queue_path.read_text())
+        assert len(queue) == 1
+        assert queue[0]["id"] == "extract-a"

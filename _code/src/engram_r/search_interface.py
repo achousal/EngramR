@@ -688,7 +688,7 @@ def create_notes_from_results(
                 "will block downstream /reduce extraction",
                 result.get("title", "")[:60],
             )
-        elif len(abstract) < 200:
+        elif len(abstract) < 200 and abstract_status != "pubmed_fallback":
             abstract_status = "short"
             logger.warning(
                 "Suspiciously short abstract (%d chars) for '%s' -- "
@@ -791,7 +791,7 @@ def create_queue_entries(
     Returns:
         List of newly created queue entry dicts (for logging/display).
     """
-    from datetime import datetime, timezone
+    from datetime import UTC, datetime
 
     queue_path = Path(queue_path)
     vault_root_path = Path(vault_root) if vault_root else None
@@ -808,7 +808,7 @@ def create_queue_entries(
         e.get("source", "") for e in queue if isinstance(e, dict)
     }
 
-    now = datetime.now(timezone.utc).isoformat()
+    now = datetime.now(UTC).isoformat()
     new_entries: list[dict] = []
 
     for note in created_notes:

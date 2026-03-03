@@ -271,6 +271,7 @@ class VaultState:
     federation_exchange_dir: str = ""
     federation_peers_count: int = 0
     quarantine_count: int = 0
+    queue_blocked: int = 0
 
 
 # ---------------------------------------------------------------------------
@@ -322,15 +323,93 @@ def _count_unmined_sessions(sessions_dir: Path, marker_dir: Path) -> int:
 
 
 def _count_queue_pending(queue_file: Path) -> int:
-    """Count pending tasks in the queue.json."""
+    """Count pending tasks in the queue.json.
+
+    Handles both flat-list format (live queue) and dict-with-tasks format.
+    """
     if not queue_file.is_file():
         return 0
     try:
-        data = json.loads(queue_file.read_text())
-        tasks = data.get("tasks", [])
-        return sum(1 for t in tasks if t.get("status") not in ("done", "archived"))
+        raw = json.loads(queue_file.read_text())
+        tasks = raw if isinstance(raw, list) else raw.get("tasks", [])
+        return sum(
+            1 for t in tasks
+            if t.get("status") not in ("done", "archived", "blocked")
+        )
     except (json.JSONDecodeError, OSError):
         return 0
+
+
+def _is_literature_stub(text: str) -> bool:
+    """Return True if text lacks populated Key Points and Relevance sections."""
+    has_key_points = False
+    has_relevance = False
+    lines = text.splitlines()
+    current_section = ""
+    for line in lines:
+        stripped = line.strip()
+        if stripped.startswith("## Key Points"):
+            current_section = "key_points"
+            continue
+        elif stripped.startswith("## Relevance"):
+            current_section = "relevance"
+            continue
+        elif stripped.startswith("## "):
+            current_section = ""
+            continue
+        if current_section == "key_points" and stripped and not stripped.startswith("---"):
+            has_key_points = True
+        if current_section == "relevance" and stripped and not stripped.startswith("---"):
+            has_relevance = True
+    return not (has_key_points and has_relevance)
+
+
+def _count_queue_blocked(queue_file: Path) -> int:
+    """Count queue tasks blocked on unpopulated literature stubs.
+
+    A task is considered blocked when:
+    - status == "blocked", OR
+    - status == "pending" AND current_phase == "reduce" AND the source file
+      is missing or is a stub (Key Points and Relevance both empty).
+
+    Args:
+        queue_file: Path to ops/queue/queue.json.
+
+    Returns:
+        Number of blocked tasks.
+    """
+    if not queue_file.is_file():
+        return 0
+    try:
+        raw = json.loads(queue_file.read_text())
+        tasks = raw if isinstance(raw, list) else raw.get("tasks", [])
+    except (json.JSONDecodeError, OSError):
+        return 0
+
+    vault_root = queue_file.parent.parent.parent  # ops/queue/queue.json -> vault
+    count = 0
+    for t in tasks:
+        status = t.get("status", "")
+        if status == "blocked":
+            count += 1
+            continue
+        if status == "pending" and t.get("current_phase") == "reduce":
+            source = t.get("source", "")
+            if not source:
+                count += 1
+                continue
+            source_path = vault_root / source
+            if not source_path.is_file():
+                count += 1
+                continue
+            try:
+                text = source_path.read_text(errors="replace")
+            except OSError:
+                count += 1
+                continue
+            if _is_literature_stub(text):
+                count += 1
+    return count
 
 
 def _count_orphan_notes(vault_path: Path) -> int:
@@ -710,6 +789,7 @@ def scan_vault(vault_path: Path, config: DaemonConfig) -> VaultState:
     state.tension_count = _count_files(tens_dir)
     state.inbox_count = _count_files(inbox_dir)
     state.queue_backlog = _count_queue_pending(queue_file)
+    state.queue_blocked = _count_queue_blocked(queue_file)
     state.orphan_count = _count_orphan_notes(vault_path)
     state.unmined_session_count = _count_unmined_sessions(sessions_dir, marker_dir)
 
@@ -944,7 +1024,7 @@ class SelectionResult:
 
 
 def vault_summary_dict(state: VaultState) -> dict:
-    """Build the 8-key vault summary dict from a VaultState snapshot.
+    """Build the 9-key vault summary dict from a VaultState snapshot.
 
     Used by ``select_task_audited`` (audit trail), ``main`` (idle output),
     and ``--scan-only`` mode.  Single source of truth for the summary shape.
@@ -955,6 +1035,7 @@ def vault_summary_dict(state: VaultState) -> dict:
         "observations": state.observation_count,
         "tensions": state.tension_count,
         "queue_backlog": state.queue_backlog,
+        "queue_blocked": state.queue_blocked,
         "orphan_notes": state.orphan_count,
         "inbox": state.inbox_count,
         "unmined_sessions": state.unmined_session_count,

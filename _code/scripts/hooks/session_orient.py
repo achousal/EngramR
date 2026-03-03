@@ -25,6 +25,10 @@ _CODE_DIR = _SCRIPT_DIR.parent.parent  # _code/
 # Ensure src/ is importable for engram_r package
 sys.path.insert(0, str(_CODE_DIR / "src"))
 
+from engram_r.daemon_scheduler import (  # noqa: E402
+    _count_queue_blocked,
+    _count_queue_pending,
+)
 from engram_r.hook_utils import load_config, resolve_vault  # noqa: E402
 
 
@@ -156,12 +160,15 @@ def _count_md_files(directory: Path) -> int:
 
 
 def _vault_state_counts(vault: Path) -> dict[str, int]:
-    """Count claims, inbox items, observations, and tensions."""
+    """Count claims, inbox items, observations, tensions, and queue state."""
+    queue_file = vault / "ops" / "queue" / "queue.json"
     return {
         "claims": _count_md_files(vault / "notes"),
         "inbox": _count_md_files(vault / "inbox"),
         "observations": _count_md_files(vault / "ops" / "observations"),
         "tensions": _count_md_files(vault / "ops" / "tensions"),
+        "queue_pending": _count_queue_pending(queue_file),
+        "queue_blocked": _count_queue_blocked(queue_file),
     }
 
 
@@ -345,11 +352,15 @@ def main() -> None:
     counts = _vault_state_counts(vault)
     parts.append("")
     parts.append("### Vault State")
+    queue_str = f"{counts['queue_pending']} pending"
+    if counts["queue_blocked"] > 0:
+        queue_str += f" ({counts['queue_blocked']} blocked)"
     parts.append(
         f"  Claims: {counts['claims']} | "
         f"Inbox: {counts['inbox']} | "
         f"Observations: {counts['observations']} | "
-        f"Tensions: {counts['tensions']}"
+        f"Tensions: {counts['tensions']} | "
+        f"Queue: {queue_str}"
     )
 
     # Metabolic dashboard (condensed, only when enabled + vault non-empty)
@@ -366,6 +377,11 @@ def main() -> None:
         parts.append("  -> 10+ observations pending -- consider running /rethink")
     if counts["tensions"] >= 5:
         parts.append("  -> 5+ tensions pending -- consider running /rethink")
+    if counts["queue_blocked"] > 0:
+        parts.append(
+            f"  -> {counts['queue_blocked']} queue tasks blocked on "
+            f"unpopulated stubs -- populate via /literature before /ralph"
+        )
 
     # Methodology directives
     methodology = _load_methodology(vault)

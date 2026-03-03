@@ -245,6 +245,20 @@ def classify_signals(state: VaultState, config: DaemonConfig) -> list[Signal]:
             )
         )
 
+    if state.queue_blocked > 0:
+        signals.append(
+            Signal(
+                name="queue_blocked",
+                count=state.queue_blocked,
+                speed="multi_session",
+                action="/literature",
+                rationale=(
+                    f"{state.queue_blocked} queue tasks blocked on "
+                    f"unpopulated stubs -- populate before /ralph"
+                ),
+            )
+        )
+
     if state.stale_note_count > 10:
         signals.append(
             Signal(
@@ -572,6 +586,7 @@ def _build_state_summary(state: VaultState) -> dict:
         "observations": state.observation_count,
         "tensions": state.tension_count,
         "queue_backlog": state.queue_backlog,
+        "queue_blocked": state.queue_blocked,
         "orphan_notes": state.orphan_count,
         "inbox": state.inbox_count,
         "unmined_sessions": state.unmined_session_count,

@@ -88,7 +88,7 @@ Implements the Literature agent supporting the co-scientist system (arXiv:2502.1
 
 ## Code
 
-- `_code/src/engram_r/search_interface.py` -- unified search interface, `check_literature_readiness()`, `resolve_literature_sources()`, `search_all_sources()`, `save_results_json()`, `create_notes_from_results()`
+- `_code/src/engram_r/search_interface.py` -- unified search interface, `check_literature_readiness()`, `resolve_literature_sources()`, `search_all_sources()`, `save_results_json()`, `create_notes_from_results()`, `create_queue_entries()`
 - `_code/src/engram_r/pubmed.py` -- PubMed search via NCBI EUTILS
 - `_code/src/engram_r/arxiv.py` -- arXiv Atom API search
 - `_code/src/engram_r/semantic_scholar.py` -- Semantic Scholar Graph API search
@@ -218,20 +218,45 @@ After saving literature notes and updating `_index.md`, chain to the arscontexta
 | Mode | Action |
 |------|--------|
 | `manual` | Print `Next: /ralph` to process queued literature notes (each starts with /reduce, then reflect/reweave/verify) |
-| `suggested` (default) | Create queue entries in `ops/queue/queue.json`, then print `Next: /ralph` (or `/ralph N` for N notes). Each task starts at the reduce phase |
-| `automatic` | Create queue entries, then print `Next: /ralph` (automatic execution not yet implemented) |
+| `suggested` (default) | Create queue entries via `create_queue_entries()`, then print `Next: /ralph` (or `/ralph N` for N notes). Each task starts at the reduce phase |
+| `automatic` | Create queue entries via `create_queue_entries()`, then print `Next: /ralph` (automatic execution not yet implemented) |
 
-**Queue entry format** (for `suggested` mode):
-```json
-{
-  "id": "extract-{literature-note-basename}",
-  "type": "extract",
-  "status": "pending",
-  "source": "_research/literature/{filename}.md",
-  "created": "[ISO timestamp]",
-  "current_phase": "reduce",
-  "completed_phases": []
-}
+**CRITICAL: Always use `create_queue_entries()` to write queue entries.** Never manually construct queue JSON. The function uses actual file paths from `create_notes_from_results()`, preventing path truncation and author-name mismatches.
+
+```python
+set -a && source _code/.env 2>/dev/null && set +a && uv run --directory {vault_root}/_code python -c "
+import json, sys; sys.path.insert(0, 'src')
+from engram_r.search_interface import create_queue_entries
+# 'created' is the list returned by create_notes_from_results() in the previous step
+created = {created_json_list}
+entries = create_queue_entries(
+    created_notes=created,
+    queue_path='../ops/queue/queue.json',
+    vault_root='..',
+)
+print(json.dumps(entries, indent=2))
+"
+```
+
+Alternatively, combine note creation and queue entry creation in a single Python call:
+
+```python
+set -a && source _code/.env 2>/dev/null && set +a && uv run --directory {vault_root}/_code python -c "
+import json, sys; sys.path.insert(0, 'src')
+from engram_r.search_interface import create_notes_from_results, create_queue_entries
+created = create_notes_from_results(
+    results_json='../ops/queue/.literature_results.json',
+    indices=[{comma_separated_indices}],
+    output_dir='../_research/literature/',
+    goal_tag='{goal_tag_or_empty}',
+)
+entries = create_queue_entries(
+    created_notes=created,
+    queue_path='../ops/queue/queue.json',
+    vault_root='..',
+)
+print(json.dumps({'notes': created, 'queue_entries': entries}, indent=2))
+"
 ```
 
 **Output after all notes saved:**
