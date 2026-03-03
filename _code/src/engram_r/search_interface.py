@@ -394,10 +394,11 @@ def _fill_missing_abstracts(
     results: list[ArticleResult],
     timeout: int = 5,
 ) -> list[ArticleResult]:
-    """Fill empty abstracts via Semantic Scholar DOI lookup.
+    """Fill empty abstracts via Semantic Scholar then PubMed DOI lookup.
 
     For each result that has a DOI but no abstract, queries the S2 paper
-    detail endpoint. Only fills missing abstracts -- never overwrites.
+    detail endpoint first, then falls back to PubMed EFetch.
+    Only fills missing abstracts -- never overwrites.
 
     Args:
         results: Deduplicated list of ArticleResult.
@@ -416,9 +417,11 @@ def _fill_missing_abstracts(
         headers["x-api-key"] = api_key
 
     s2_base = "https://api.semanticscholar.org/graph/v1/paper"
-    filled = 0
+    filled_s2 = 0
+    filled_pubmed = 0
 
     for result in candidates:
+        # Try Semantic Scholar first
         encoded_doi = urllib.parse.quote(result.doi, safe="")
         url = f"{s2_base}/DOI:{encoded_doi}?fields=abstract"
         try:
@@ -428,18 +431,42 @@ def _fill_missing_abstracts(
             abstract = data.get("abstract") or ""
             if abstract:
                 result.abstract = abstract
-                filled += 1
+                filled_s2 += 1
                 logger.info(
                     "Filled abstract for DOI %s via S2 fallback", result.doi
                 )
+                continue
         except Exception:
             logger.debug(
                 "S2 abstract fallback failed for DOI %s", result.doi
             )
-            continue
 
-    if filled:
-        logger.info("Filled %d/%d missing abstracts via S2", filled, len(candidates))
+        # Fall back to PubMed EFetch
+        try:
+            from engram_r.pubmed import fetch_abstract_by_doi as pubmed_fetch
+
+            abstract = pubmed_fetch(result.doi, timeout=timeout)
+            if abstract:
+                result.abstract = abstract
+                filled_pubmed += 1
+                logger.info(
+                    "Filled abstract for DOI %s via PubMed fallback", result.doi
+                )
+                continue
+        except Exception:
+            logger.debug(
+                "PubMed abstract fallback failed for DOI %s", result.doi
+            )
+
+    total_filled = filled_s2 + filled_pubmed
+    if total_filled:
+        logger.info(
+            "Filled %d/%d missing abstracts (S2: %d, PubMed: %d)",
+            total_filled,
+            len(candidates),
+            filled_s2,
+            filled_pubmed,
+        )
 
     return results
 
@@ -634,6 +661,42 @@ def create_notes_from_results(
                 })
                 continue
 
+        # Abstract quality gate: warn and attempt fallback if empty/short
+        abstract = result.get("abstract", "")
+        abstract_status = "full"
+
+        if not abstract and doi:
+            logger.warning(
+                "Empty abstract for '%s' (DOI: %s) -- attempting PubMed fallback",
+                result.get("title", "")[:60],
+                doi,
+            )
+            try:
+                from engram_r.pubmed import fetch_abstract_by_doi as pubmed_fetch
+
+                abstract = pubmed_fetch(doi) or ""
+                if abstract:
+                    abstract_status = "pubmed_fallback"
+                    logger.info("  -> Filled via PubMed (%d chars)", len(abstract))
+            except Exception:
+                logger.debug("PubMed fallback failed for DOI %s", doi)
+
+        if not abstract:
+            abstract_status = "empty"
+            logger.warning(
+                "Writing note with EMPTY abstract: '%s' -- "
+                "will block downstream /reduce extraction",
+                result.get("title", "")[:60],
+            )
+        elif len(abstract) < 200:
+            abstract_status = "short"
+            logger.warning(
+                "Suspiciously short abstract (%d chars) for '%s' -- "
+                "may be truncated",
+                len(abstract),
+                result.get("title", "")[:60],
+            )
+
         tags = [goal_tag] if goal_tag else None
         content = build_literature_note(
             title=result.get("title", ""),
@@ -641,7 +704,7 @@ def create_notes_from_results(
             authors=result.get("authors", []),
             year=result.get("year") or "",
             journal=result.get("journal", ""),
-            abstract=result.get("abstract", ""),
+            abstract=abstract,
             tags=tags,
             source_type=result.get("source_type", ""),
         )
@@ -666,6 +729,7 @@ def create_notes_from_results(
             "title": result.get("title", ""),
             "doi": doi,
             "status": "created",
+            "abstract_status": abstract_status,
         })
 
     return created
@@ -701,3 +765,94 @@ def _check_doi_duplicate(doi: str, literature_dir: Path) -> Path | None:
         except Exception:
             continue
     return None
+
+
+# -- Queue entry creation -----------------------------------------------------
+
+
+def create_queue_entries(
+    created_notes: list[dict],
+    queue_path: str | Path,
+    vault_root: str | Path | None = None,
+) -> list[dict]:
+    """Append deduplicated extract queue entries for newly created literature notes.
+
+    Uses the actual file paths from ``create_notes_from_results()`` return
+    values, avoiding agent-constructed path mismatches.
+
+    Args:
+        created_notes: List of dicts from ``create_notes_from_results()``.
+            Each must have keys: path, status. Only entries with
+            status="created" are queued.
+        queue_path: Path to ops/queue/queue.json.
+        vault_root: Vault root for computing relative paths. If None,
+            paths are stored as-is.
+
+    Returns:
+        List of newly created queue entry dicts (for logging/display).
+    """
+    from datetime import datetime, timezone
+
+    queue_path = Path(queue_path)
+    vault_root_path = Path(vault_root) if vault_root else None
+
+    # Load existing queue
+    if queue_path.exists():
+        queue = json.loads(queue_path.read_text())
+    else:
+        queue_path.parent.mkdir(parents=True, exist_ok=True)
+        queue = []
+
+    # Collect existing source paths for dedup
+    existing_sources = {
+        e.get("source", "") for e in queue if isinstance(e, dict)
+    }
+
+    now = datetime.now(timezone.utc).isoformat()
+    new_entries: list[dict] = []
+
+    for note in created_notes:
+        if note.get("status") != "created":
+            continue
+
+        note_path = note.get("path", "")
+        if not note_path:
+            continue
+
+        # Compute relative path from vault root
+        if vault_root_path:
+            try:
+                rel_path = str(Path(note_path).relative_to(vault_root_path))
+            except ValueError:
+                rel_path = note_path
+        else:
+            rel_path = note_path
+
+        # Dedup by source path
+        if rel_path in existing_sources:
+            logger.info("Queue entry already exists for %s -- skipping", rel_path)
+            continue
+
+        # Build queue ID from filename stem
+        stem = Path(note_path).stem
+        queue_id = f"extract-{stem}"
+
+        entry = {
+            "id": queue_id,
+            "type": "extract",
+            "status": "pending",
+            "source": rel_path,
+            "created": now,
+            "current_phase": "reduce",
+            "completed_phases": [],
+        }
+
+        queue.append(entry)
+        existing_sources.add(rel_path)
+        new_entries.append(entry)
+
+    # Write atomically
+    queue_path.write_text(json.dumps(queue, indent=2, ensure_ascii=False))
+    logger.info("Added %d queue entries to %s", len(new_entries), queue_path)
+
+    return new_entries

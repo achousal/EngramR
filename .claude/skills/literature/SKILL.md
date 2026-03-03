@@ -189,9 +189,9 @@ print(json.dumps(created, indent=2))
 "
 ```
 
-**NEVER manually call `build_literature_note()` with abstract text from agent context.** The `create_notes_from_results()` function reads the full abstract from the JSON file, builds the note, handles filename generation, and checks for DOI duplicates.
+**NEVER manually call `build_literature_note()` with abstract text from agent context.** The `create_notes_from_results()` function reads the full abstract from the JSON file, builds the note, handles filename generation, checks for DOI duplicates, and warns on empty/short abstracts (with automatic PubMed fallback for empty abstracts).
 
-The function returns a list of dicts with keys: `index`, `path`, `title`, `doi`, `status` (created/skipped/error).
+The function returns a list of dicts with keys: `index`, `path`, `title`, `doi`, `status` (created/skipped/error), `abstract_status` (full/short/empty/pubmed_fallback).
 
 ### Step 7: Update Index
 Update `_research/literature/_index.md` under "Recent Additions" with wiki-link to new note.
