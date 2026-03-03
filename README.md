@@ -1,6 +1,6 @@
 # Engram Reactor
 
-**EngramR is a cumulative research environment where humans and AI jointly capture, connect, and stress-test knowledge, translate evidence into prioritized research plans, and track the data, infrastructure, and analytical context that ground every analysis -- maintaining end-to-end provenance from source to result.**
+**This is EngramR, a cumulative research environment where humans and AI jointly capture, connect, and stress-test knowledge, translate evidence into prioritized research plans, and track the data, infrastructure, and analytical context that ground every analysis -- maintaining end-to-end provenance from source to result.**
 
 Every paper read, observation logged, and experimental result feeds a persistent
 knowledge graph. Hypotheses are generated from that evidence, debated pairwise on

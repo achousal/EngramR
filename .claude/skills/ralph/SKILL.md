@@ -423,12 +423,17 @@ Ralph Lead (you) — orchestration only
 
 ### 6a. Identify Parallelizable Claims
 
-From the filtered queue, find pending claims. A claim is parallelizable when its `status == "pending"`. Cap at 5 concurrent workers (or N, whichever is smaller).
+From the filtered queue, find pending **claim-pipeline tasks** (type: claim or type: enrichment). Extract tasks (type: extract) are NOT parallelizable -- they produce new tasks that require sequential registration.
+
+**Guard check:** If after excluding extract tasks, zero claim-pipeline tasks remain, report the extract-only error from the incompatibility check above and fall back to serial mode (Step 4).
+
+A claim is parallelizable when its `status == "pending"` and `type != "extract"`. Cap at 5 concurrent workers (or N, whichever is smaller).
 
 Report:
 ```
 === Parallel Mode ===
 Parallelizable claims: {count}
+Excluded extract tasks: {extract_count} (serial only)
 Max concurrent workers: {min(count, N, 5)}
 ```
 
