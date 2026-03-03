@@ -11,7 +11,7 @@ Run validation on all created artifacts:
 ### 6a. Schema check
 
 For each created project note, verify required YAML fields are present:
-- type, title, project_tag, lab, pi, status, project_path, language, hpc_path, scheduler, linked_goals, linked_hypotheses, linked_experiments, has_claude_md, has_git, has_tests, created, updated, tags
+- type, title, description, project_tag, lab, pi, status, project_path, language, hpc_path, scheduler, linked_goals, linked_hypotheses, linked_experiments, has_claude_md, has_git, has_tests, created, updated, tags
 
 ### 6b. Link health
 

@@ -34,6 +34,7 @@ If the strategic interview identified new research directions not covered by exi
 ---
 type: research-goal
 title: "{goal title}"
+description: "{one sentence adding context beyond title}"
 status: active
 linked_labs: ["{lab_slug}"]
 constraints: []
@@ -42,6 +43,13 @@ domain: "{domain}"
 tags: [research-goal]
 created: {today}
 ---
+```
+
+Body must end with a Topics section:
+```markdown
+---
+
+Topics:
 ```
 
 `linked_labs` scopes the goal to one or more labs. Use `["{lab_slug}"]` for lab-specific goals. For cross-lab goals, list all relevant lab slugs. An empty list means vault-wide.
@@ -60,6 +68,7 @@ For each NEW project, build a project note. Follow the exact schema from `_code/
 ---
 type: project
 title: "{detected or user-provided title}"
+description: "{one-line description from CLAUDE.md or user correction}"
 project_tag: "{tag}"
 lab: "{lab name}"
 pi: "{PI}"
@@ -82,6 +91,10 @@ tags: [project, {lab_slug}]
 {One-line description from CLAUDE.md or user correction}
 
 ![[_dev/{tag}/CLAUDE.md]]
+
+---
+
+Topics:
 ```
 
 ### 5a2. Internal Doc Discovery (auto-selected, no per-project checklist)

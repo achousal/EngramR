@@ -68,8 +68,8 @@ Parse immediately:
    - Build an `enrichments` dict mapping 1-based index to `{"key_points": [...], "relevance": "..."}`.
 9. Create notes via `create_notes_from_results()` passing the saved JSON path, selected indices, output_dir=`_research/literature/`, goal_tag if applicable, and the `enrichments` dict. Pass enrichments as a JSON string that Python `json.loads()` parses. **NEVER manually construct abstract text or pass abstracts as arguments** -- the function reads full abstracts from the JSON file.
 10. Update `_research/literature/_index.md` (create if missing).
-10. Execute pipeline chaining per `processing.chaining` mode.
-11. Present saved note paths. If `--handoff`: emit CO-SCIENTIST HANDOFF block.
+11. Execute pipeline chaining per `processing.chaining` mode.
+12. Present saved note paths. If `--handoff`: emit CO-SCIENTIST HANDOFF block.
 
 **START NOW.** Reference below explains methodology -- use to guide, not as output.
 
@@ -184,18 +184,30 @@ Source column shows backend name (PubMed, Semantic Scholar, etc.). Cites shows c
 ### Step 5: User Selection
 Ask which papers to save as notes. Accept comma-separated numbers or "all".
 
+### Step 5.5: Enrich Selected Papers
+
+For each selected paper, generate enrichment content before note creation:
+
+1. **Key Points**: Read the abstract (from the saved JSON or search results). Extract 3-5 key factual findings as concise bullet strings (no leading `- ` -- the renderer adds it).
+2. **Relevance**: Read active goals from `self/goals.md`. Write 2-4 sentences connecting the paper to active goals using wiki-links (e.g. `[[biomarker-validation]]`). If `--goal` was provided, prioritize that goal. If no goals match, write a generic scientific contribution statement.
+3. Build a Python dict: `enrichments = {1: {"key_points": ["...", "..."], "relevance": "..."}, 2: {...}}` (1-based indices matching selected papers).
+
 ### Step 6: Build Notes via Python (preserves full abstracts)
-Call `create_notes_from_results()` to build and write notes entirely in Python:
+Call `create_notes_from_results()` to build and write notes entirely in Python. Pass enrichments as a JSON string:
 
 ```python
 set -a && source _code/.env 2>/dev/null && set +a && uv run --directory {vault_root}/_code python -c "
 import json, sys; sys.path.insert(0, 'src')
 from engram_r.search_interface import create_notes_from_results
+enrichments = json.loads('{enrichments_json_string}')
+# Convert string keys back to int (JSON serialization turns int keys to strings)
+enrichments = {int(k): v for k, v in enrichments.items()}
 created = create_notes_from_results(
     results_json='../ops/queue/.literature_results.json',
     indices=[{comma_separated_indices}],
     output_dir='../_research/literature/',
     goal_tag='{goal_tag_or_empty}',
+    enrichments=enrichments,
 )
 print(json.dumps(created, indent=2))
 "
@@ -203,7 +215,7 @@ print(json.dumps(created, indent=2))
 
 **NEVER manually call `build_literature_note()` with abstract text from agent context.** The `create_notes_from_results()` function reads the full abstract from the JSON file, builds the note, handles filename generation, checks for DOI duplicates, and warns on empty/short abstracts (with automatic PubMed fallback for empty abstracts).
 
-The function returns a list of dicts with keys: `index`, `path`, `title`, `doi`, `status` (created/skipped/error), `abstract_status` (full/short/empty/pubmed_fallback).
+The function returns a list of dicts with keys: `index`, `path`, `title`, `doi`, `status` (created/skipped/error), `abstract_status` (full/short/empty/pubmed_fallback), `enriched` (bool).
 
 ### Step 7: Update Index
 Update `_research/literature/_index.md` under "Recent Additions" with wiki-link to new note.
@@ -215,7 +227,7 @@ Update `_research/literature/_index.md` under "Recent Additions" with wiki-link 
 
 ## Note Structure
 
-Each literature note has YAML frontmatter with: type, title, doi, authors, year, journal, tags, status (unread/reading/read/cited), created date.
+Each literature note has YAML frontmatter with: type, title, description, doi, authors, year, journal, tags, status (unread/reading/read/cited), created date.
 
 Sections: Abstract, Key Points, Methods Notes, Relevance, Citations.
 
@@ -256,11 +268,14 @@ Alternatively, combine note creation and queue entry creation in a single Python
 set -a && source _code/.env 2>/dev/null && set +a && uv run --directory {vault_root}/_code python -c "
 import json, sys; sys.path.insert(0, 'src')
 from engram_r.search_interface import create_notes_from_results, create_queue_entries
+enrichments = json.loads('{enrichments_json_string}')
+enrichments = {int(k): v for k, v in enrichments.items()}
 created = create_notes_from_results(
     results_json='../ops/queue/.literature_results.json',
     indices=[{comma_separated_indices}],
     output_dir='../_research/literature/',
     goal_tag='{goal_tag_or_empty}',
+    enrichments=enrichments,
 )
 entries = create_queue_entries(
     created_notes=created,
