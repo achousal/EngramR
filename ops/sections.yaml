@@ -1,4 +1,4 @@
-# ops/sections.yaml -- Code section definitions for /stats --dev
+# ops/sections.yaml -- Code section definitions for /dev
 #
 # Each section defines a logical boundary of the codebase with:
 #   paths: directories that belong to this section

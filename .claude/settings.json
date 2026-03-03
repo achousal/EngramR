@@ -53,6 +53,7 @@
   },
   "permissions": {
     "allow": [
+      "Skill(dev)",
       "Skill(eda)",
       "Skill(evolve)",
       "Skill(experiment)",
