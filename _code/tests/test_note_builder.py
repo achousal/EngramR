@@ -53,6 +53,20 @@ class TestBuildLiteratureNote:
         assert fm["authors"] == []
         assert "literature" in fm["tags"]
 
+    def test_description_in_frontmatter(self):
+        note = build_literature_note(
+            title="Test Paper",
+            description="First sentence of the abstract, capped at 150 chars.",
+            today=date(2026, 3, 3),
+        )
+        fm = _parse_frontmatter(note)
+        assert fm["description"] == "First sentence of the abstract, capped at 150 chars."
+
+    def test_description_defaults_empty(self):
+        note = build_literature_note(title="Minimal")
+        fm = _parse_frontmatter(note)
+        assert fm["description"] == ""
+
     def test_source_type_tag_injected(self):
         note = build_literature_note(
             title="S2 Paper",
@@ -167,6 +181,19 @@ class TestBuildResearchGoalNote:
         assert fm["status"] == "active"
         assert fm["domain"] == "test-domain"
         assert "## Objective" in note
+
+
+class TestBuildResearchGoalDescription:
+    def test_description_in_frontmatter(self):
+        note = build_research_goal_note(
+            title="Biomarker Validation",
+            description="Validate blood-based biomarkers across three cohorts.",
+            objective="Identify p-tau217 cutpoints.",
+            domain="neuroscience",
+            today=date(2026, 3, 3),
+        )
+        fm = _parse_frontmatter(note)
+        assert fm["description"] == "Validate blood-based biomarkers across three cohorts."
 
 
 class TestBuildTournamentMatchNote:
@@ -350,6 +377,32 @@ class TestBuildProjectNote:
         assert fm["scan_dirs"] == []
         assert fm["scan_exclude"] == []
         assert "project" in fm["tags"]
+
+    def test_description_in_frontmatter(self):
+        note = build_project_note(
+            title="DescProject",
+            project_tag="desc-proj",
+            lab="TestLab",
+            project_path="/tmp/desc",
+            description="ML pipeline for risk prediction.",
+            today=date(2026, 3, 3),
+        )
+        fm = _parse_frontmatter(note)
+        assert fm["description"] == "ML pipeline for risk prediction."
+        # description also appears in body
+        assert "ML pipeline for risk prediction." in note.split("---", 2)[2]
+
+    def test_status_tool_valid(self):
+        note = build_project_note(
+            title="ToolProject",
+            project_tag="tool-proj",
+            lab="TestLab",
+            project_path="/tmp/tool",
+            status="tool",
+            today=date(2026, 3, 3),
+        )
+        fm = _parse_frontmatter(note)
+        assert fm["status"] == "tool"
 
     def test_scan_fields(self):
         note = build_project_note(
