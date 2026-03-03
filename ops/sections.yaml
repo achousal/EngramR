@@ -5,7 +5,7 @@
 #   checks: commands that verify section health
 #   depends_on: sections whose changes can break this one
 #
-# Used by: ops/scripts/section-check.sh, /stats --dev
+# Used by: ops/scripts/section-check.sh, /dev
 
 sections:
 
