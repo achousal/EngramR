@@ -667,3 +667,104 @@ class TestComputeMetabolicState:
         assert state.total_hypotheses == 0
         # No alarms on empty vault
         assert state.alarm_keys == []
+
+
+# ---------------------------------------------------------------------------
+# Bare-list queue format (regression for queue.json as JSON array)
+# ---------------------------------------------------------------------------
+
+
+class TestBareListQueueFormat:
+    """queue.json can be a bare JSON array instead of {"tasks": [...]}."""
+
+    def test_qpr_accepts_bare_list(self):
+        now = datetime.now(UTC)
+        queue_data = [
+            {"id": "t1", "status": "pending"},
+            {
+                "id": "t2",
+                "status": "done",
+                "completed": (now - timedelta(days=1)).isoformat(),
+            },
+        ]
+        qpr = compute_qpr(queue_data=queue_data, lookback_days=7)
+        # 1 pending, 1 completion in 7d -> rate=1/7 -> QPR=7
+        assert abs(qpr - 7.0) < 0.01
+
+    def test_tpv_accepts_bare_list(self):
+        now = datetime.now(UTC)
+        queue_data = [
+            {
+                "id": "t1",
+                "status": "done",
+                "completed": (now - timedelta(days=1)).isoformat(),
+            },
+            {
+                "id": "t2",
+                "status": "done",
+                "completed": (now - timedelta(days=2)).isoformat(),
+            },
+        ]
+        tpv = compute_tpv(queue_data=queue_data, lookback_days=7)
+        assert abs(tpv - 2 / 7) < 0.01
+
+    def test_cmr_accepts_bare_list(self, tmp_path):
+        notes = tmp_path / "notes"
+        notes.mkdir()
+        now = datetime.now(UTC)
+        queue_data = [
+            {
+                "id": "claim-1",
+                "type": "claim",
+                "status": "done",
+                "completed_phases": ["create", "reflect"],
+                "completed": (now - timedelta(days=1)).isoformat(),
+            },
+        ]
+        cmr = compute_cmr(notes, queue_data=queue_data, lookback_days=7)
+        assert cmr >= 0
+
+    def test_reads_bare_list_from_disk(self, tmp_path):
+        """compute_qpr reads a bare-list queue.json from disk correctly."""
+        now = datetime.now(UTC)
+        queue_file = tmp_path / "queue.json"
+        queue_file.write_text(
+            json.dumps(
+                [
+                    {"id": "t1", "status": "pending"},
+                    {
+                        "id": "t2",
+                        "status": "done",
+                        "completed": now.isoformat(),
+                    },
+                ]
+            )
+        )
+        qpr = compute_qpr(queue_path=queue_file, lookback_days=7)
+        assert abs(qpr - 7.0) < 0.01
+
+    def test_end_to_end_bare_list_queue(self, tmp_path):
+        """compute_metabolic_state works with a bare-list queue.json on disk."""
+        notes = tmp_path / "notes"
+        notes.mkdir()
+        (tmp_path / "_research" / "hypotheses").mkdir(parents=True)
+        (tmp_path / "inbox").mkdir()
+        queue_dir = tmp_path / "ops" / "queue"
+        queue_dir.mkdir(parents=True)
+
+        now = datetime.now(UTC)
+        (queue_dir / "queue.json").write_text(
+            json.dumps(
+                [
+                    {"id": "t1", "status": "pending"},
+                    {
+                        "id": "t2",
+                        "status": "done",
+                        "completed": (now - timedelta(days=1)).isoformat(),
+                    },
+                ]
+            )
+        )
+        state = compute_metabolic_state(tmp_path)
+        assert state.qpr > 0
+        assert state.tpv > 0
