@@ -25,6 +25,22 @@ logger = logging.getLogger(__name__)
 
 _FM_RE = re.compile(r"^---\s*\n(.*?)\n---", re.DOTALL)
 
+
+def _normalize_queue_data(raw: dict | list | None) -> dict:
+    """Normalize queue data to ``{"tasks": [...]}``.
+
+    Handles two on-disk formats:
+    - Legacy dict: ``{"tasks": [...]}`` -- returned as-is.
+    - Current list: ``[{...}, ...]`` -- wrapped in ``{"tasks": [...]}``.
+    """
+    if raw is None:
+        return {"tasks": []}
+    if isinstance(raw, list):
+        return {"tasks": raw}
+    if isinstance(raw, dict):
+        return raw
+    return {"tasks": []}
+
 # Tier classification for alarm keys
 ALARM_TIERS: dict[str, int] = {
     "qpr_critical": 1,
@@ -114,6 +130,7 @@ def compute_qpr(
         except (json.JSONDecodeError, OSError):
             return 0.0
 
+    queue_data = _normalize_queue_data(queue_data)
     tasks = queue_data.get("tasks", [])
     if not tasks:
         return 0.0
@@ -220,10 +237,11 @@ def compute_cmr(
             try:
                 queue_data = json.loads(queue_path.read_text())
             except (json.JSONDecodeError, OSError):
-                queue_data = {"tasks": []}
+                queue_data = None
         else:
-            queue_data = {"tasks": []}
+            queue_data = None
 
+    queue_data = _normalize_queue_data(queue_data)
     maintenance = 0
     for t in queue_data.get("tasks", []):
         if t.get("type") != "claim":
@@ -311,6 +329,7 @@ def compute_tpv(
         except (json.JSONDecodeError, OSError):
             return 0.0
 
+    queue_data = _normalize_queue_data(queue_data)
     tasks = queue_data.get("tasks", [])
     if not tasks:
         return 0.0
@@ -484,7 +503,7 @@ def classify_alarms(
 
 def compute_metabolic_state(
     vault_path: Path,
-    queue_data: dict | None = None,
+    queue_data: dict | list | None = None,
     lookback_days: int = 7,
     orphan_count: int | None = None,
     qpr_critical: float = 3.0,
