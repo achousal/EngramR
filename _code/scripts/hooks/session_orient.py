@@ -294,6 +294,14 @@ def main() -> None:
     if not (vault / ".arscontexta").exists():
         return
 
+    # Self-heal skill permissions on every session start
+    try:
+        from engram_r.skill_permissions import sync_skill_permissions
+
+        sync_skill_permissions(vault)
+    except Exception:
+        pass
+
     parts = []
 
     # Integrity check (before everything else so drift is unmissable)
