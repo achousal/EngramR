@@ -57,7 +57,7 @@ Agent(subagent_type: "general-purpose", model: "haiku", description: "init orien
 Prompt: "Read and execute .claude/skills/init/sub-skills/init-orient.md. Return the structured ORIENT RESULTS output as specified in the sub-skill."
 ```
 
-Parse the structured output: CLAIM_COUNT, goals list, vault state, VAULT_INFORMED flag.
+Parse the structured output: CLAIM_COUNT, goals list, vault state, VAULT_INFORMED flag, GOAL_SEEDING dict, and UNSEEDED_GOALS count.
 
 ### Re-init detection
 
@@ -70,7 +70,11 @@ Options:
 1. Seed a new goal -- add foundation claims for a goal that lacks seeding
 2. Full re-seed -- generate all claim types from scratch (existing claims preserved)
 3. Cancel -- exit without changes
+{If UNSEEDED_GOALS > 0:}
+4. Seed unseeded goals -- continue where you left off ({UNSEEDED_GOALS} goals remaining)
 ```
+
+If option 4 selected: pre-populate SELECTED_GOALS with all goals whose GOAL_SEEDING status is `none` or `partial`, then skip Phase 1 goal selection and proceed directly to the budget recommendation in Phase 1.
 
 Wait for user response. If cancel, stop.
 
@@ -113,7 +117,7 @@ If `result.ready` is True: say nothing (no noise).
 
 If a goal name was provided as argument, look it up and set SELECTED_GOALS = [that goal].
 
-Otherwise, present available goals from the orient output as **editable suggestions**:
+Otherwise, present available goals from the orient output as **editable suggestions**, annotated with seeding status:
 
 ```
 === Research Goals ===
@@ -122,7 +126,14 @@ These were created during onboarding. They are suggestions -- you own them.
 Everything downstream (core questions, claims, wiring) builds from these goals,
 so get them right here. We will seed goals one at a time.
 
-{numbered list, each with title and one-line scope from the goal file's Objective}
+{numbered list, each with title, one-line scope, and seeding tag:}
+1. {goal title}    [{seeded tag}]
+   {one-line scope}
+
+Seeding tags from GOAL_SEEDING:
+  complete -> [seeded]
+  partial  -> [partial]
+  none     -> [not seeded]
 
 You can:
 - Select goals to seed (by number or name)
@@ -135,6 +146,26 @@ separate Claude session, refine there, and paste the final versions back here.
 ```
 
 Wait for user response. Build SELECTED_GOALS list (ordered).
+
+### Budget recommendation
+
+After SELECTED_GOALS is built (whether from user selection or pre-populated by option 4):
+
+```
+{If len(SELECTED_GOALS) <= 2:}
+  Proceeding with {N} goals this session.
+
+{If len(SELECTED_GOALS) > 2:}
+  You selected {N} goals. To maintain quality, I recommend seeding
+  up to 2 goals per session. I'll remember which goals are done --
+  next session, run /init and pick up the rest.
+
+  Options:
+  1. Seed first 2 now, rest next session (recommended)
+  2. Seed all {N} now (quality may degrade for later goals)
+```
+
+Wait for response. If option 1, trim SELECTED_GOALS to the first 2. Store the original count as TOTAL_SELECTED for use in Phase 6.
 
 **If user edits a goal:** Apply changes to the goal file in `_research/goals/` and update `self/goals.md` before proceeding. Re-present the edited goal for confirmation.
 
@@ -314,6 +345,15 @@ Update aggregate counters.
 
 If more goals remain in SELECTED_GOALS:
 
+**Budget-cap reached (this is goal N of N in SELECTED_GOALS, and unseeded goals remain beyond this batch):**
+```
+Goal {N} of {N} complete. {remaining unseeded count} goals remain unseeded.
+Recommended: start a fresh session for the next batch.
+Run /init and select "Seed unseeded goals" to continue.
+```
+Break the loop and proceed to Phase 6.
+
+**Under budget cap (more goals in SELECTED_GOALS):**
 ```
 Ready for the next goal: "{next goal title}"? Or stop here and seed the rest later.
 ```
@@ -324,12 +364,12 @@ Wait for user response. If user stops, break the loop and proceed to Phase 6.
 
 ## Phase 6: SUMMARY
 
-Present final summary aggregating across all goals seeded:
+Present final summary aggregating across all goals seeded, with explicit unseeded tracking:
 
 ```
 === /init Seeding Summary ===
 
-Goals seeded: {count}
+Goals seeded this session: {count}
 {for each goal seeded:}
   - {goal title}: {N} claims
 
@@ -350,11 +390,29 @@ Graph health:
 Your knowledge graph now has a four-layer foundation.
 Each orientation claim has methodology context, confounders
 that challenge it, and inversions that would falsify it.
+```
 
+**Unseeded goals call-to-action:** Compute remaining unseeded goals from the GOAL_SEEDING dict (re-check after this session's seeding completes -- goals seeded this session are now `complete`).
+
+```
+{If unseeded goals remain:}
+Goals not yet seeded ({N}):
+  - {goal-slug}
+  - {goal-slug}
+
+To continue: run /init and select "Seed unseeded goals"
+
+{If all goals seeded:}
+All research goals are now seeded.
+```
+
+Then present next steps:
+
+```
 === What's Next ===
 ```
 
-After generating the summary, run readiness check:
+Run readiness check:
 ```
 uv run --directory {vault_root}/_code python -c "
 import json, sys; sys.path.insert(0, 'src')
@@ -376,8 +434,6 @@ If not result.ready:
 /reflect   -- find connections between new and existing claims
 === End Summary ===
 ```
-
-If other goals remain unseeded (user stopped early or had more goals), suggest: "You have {N} other goals. Run `/init {goal-name}` to seed them."
 
 ---
 

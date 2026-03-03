@@ -185,9 +185,9 @@ After saving literature notes and updating `_index.md`, chain to the arscontexta
 
 | Mode | Action |
 |------|--------|
-| `manual` | Print `Next: /reduce [literature-note-path]` for each saved note |
-| `suggested` (default) | Print `Next: /reduce [path]` AND create queue entry in `ops/queue/queue.json` |
-| `automatic` | Print `Next: /reduce [path]` (automatic execution not yet implemented) |
+| `manual` | Print `Next: /ralph` to process queued literature notes (each starts with /reduce, then reflect/reweave/verify) |
+| `suggested` (default) | Create queue entries in `ops/queue/queue.json`, then print `Next: /ralph` (or `/ralph N` for N notes). Each task starts at the reduce phase |
+| `automatic` | Create queue entries, then print `Next: /ralph` (automatic execution not yet implemented) |
 
 **Queue entry format** (for `suggested` mode):
 ```json
@@ -205,8 +205,11 @@ After saving literature notes and updating `_index.md`, chain to the arscontexta
 **Output after all notes saved:**
 ```
 Pipeline chaining:
-- _research/literature/{note1}.md -> Next: /reduce _research/literature/{note1}.md
-- _research/literature/{note2}.md -> Next: /reduce _research/literature/{note2}.md
+- Queued: _research/literature/{note1}.md (reduce)
+- Queued: _research/literature/{note2}.md (reduce)
+
+Next: /ralph {N}  -- process all queued literature notes (reduce -> reflect -> reweave -> verify, fresh context per phase)
+  Or: /reduce _research/literature/{note}.md  -- process a single note manually
 ```
 
 ## Quality Gates
@@ -266,7 +269,7 @@ quality_gate_results:
   - gate: index-consistency -- {pass | fail: reason}
 
 recommendations:
-  next_suggested: reduce -- "process literature notes into claims via /reduce"
+  next_suggested: ralph -- "process queued literature notes with /ralph (runs /reduce then reflect/reweave/verify, fresh context per phase)"
 
 learnings:
   - {observation about search results or source quality} | NONE
