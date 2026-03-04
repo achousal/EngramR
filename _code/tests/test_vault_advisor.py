@@ -1057,6 +1057,35 @@ class TestBuildVaultSnapshot:
         snap = build_vault_snapshot(tmp_path)
         assert snap.has_recent_reduce is True
 
+    def test_doi_stub_count(self, tmp_path: Path):
+        """Counts DOI stubs in inbox/."""
+        inbox = tmp_path / "inbox"
+        inbox.mkdir()
+        # Valid stub
+        (inbox / "stub.md").write_text(
+            '---\nsource_type: "import"\n'
+            'source_url: "https://doi.org/10.1234/test"\n---\n\n# Title\n'
+        )
+        # Non-import (should not count)
+        (inbox / "other.md").write_text(
+            '---\nsource_type: "research"\n'
+            'source_url: "https://doi.org/10.1234/test"\n---\n\n# Title\n'
+        )
+        # Already enriched (should not count)
+        (inbox / "enriched.md").write_text(
+            '---\nsource_type: "import"\n'
+            'source_url: "https://doi.org/10.1234/test"\n'
+            'content_depth: "abstract"\n---\n\n# Title\n'
+        )
+        snap = build_vault_snapshot(tmp_path)
+        assert snap.doi_stub_count == 1
+
+    def test_doi_stub_count_empty_inbox(self, tmp_path: Path):
+        """Empty inbox gives zero doi_stub_count."""
+        (tmp_path / "inbox").mkdir()
+        snap = build_vault_snapshot(tmp_path)
+        assert snap.doi_stub_count == 0
+
 
 class TestDetectSessionTips:
     def test_reduce_inbox_fires(self):
@@ -1093,6 +1122,39 @@ class TestDetectSessionTips:
         snap = VaultSnapshot(tension_count=6)
         tips = detect_session_tips(snap)
         assert any(t.tip_id == "rethink_tensions" for t in tips)
+
+    def test_enrich_stubs_fires(self):
+        snap = VaultSnapshot(doi_stub_count=3)
+        tips = detect_session_tips(snap)
+        assert any(t.tip_id == "enrich_stubs" for t in tips)
+
+    def test_enrich_stubs_zero_does_not_fire(self):
+        snap = VaultSnapshot(doi_stub_count=0)
+        tips = detect_session_tips(snap)
+        assert not any(t.tip_id == "enrich_stubs" for t in tips)
+
+    def test_enrich_stubs_message_format(self):
+        snap = VaultSnapshot(doi_stub_count=5)
+        tips = detect_session_tips(snap)
+        enrich_tips = [t for t in tips if t.tip_id == "enrich_stubs"]
+        assert len(enrich_tips) == 1
+        assert enrich_tips[0].message.startswith("/enrich-stubs")
+        assert "5" in enrich_tips[0].message
+        assert enrich_tips[0].priority == 0
+
+    def test_enrich_stubs_priority_before_reduce(self):
+        snap = VaultSnapshot(
+            doi_stub_count=3, inbox_count=5, has_recent_reduce=False,
+        )
+        tips = detect_session_tips(snap)
+        enrich = [t for t in tips if t.tip_id == "enrich_stubs"]
+        reduce = [t for t in tips if t.tip_id == "reduce_inbox"]
+        assert enrich and reduce
+        assert enrich[0].priority <= reduce[0].priority
+
+    def test_doi_stub_count_in_snapshot(self):
+        snap = VaultSnapshot()
+        assert snap.doi_stub_count == 0
 
     def test_no_tips_on_healthy_vault(self):
         snap = VaultSnapshot(
@@ -1139,6 +1201,7 @@ class TestDetectSessionTips:
             queue_pending=5, queue_blocked_count=2,
             claim_count=25, hypothesis_count=0,
             observation_count=15, tension_count=7,
+            doi_stub_count=2,
         )
         tips = detect_session_tips(snap)
         assert len(tips) > 0

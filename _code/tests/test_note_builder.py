@@ -152,6 +152,29 @@ class TestBuildLiteratureNote:
         )
         assert "## Relevance\n\n" in note
 
+    def test_content_depth_default_is_abstract(self):
+        note = build_literature_note(title="Default Depth")
+        fm = _parse_frontmatter(note)
+        assert fm["content_depth"] == "abstract"
+
+    def test_content_depth_stub(self):
+        note = build_literature_note(
+            title="Stub Paper",
+            content_depth="stub",
+            today=date(2026, 3, 4),
+        )
+        fm = _parse_frontmatter(note)
+        assert fm["content_depth"] == "stub"
+
+    def test_content_depth_full_text(self):
+        note = build_literature_note(
+            title="Full Text Paper",
+            content_depth="full_text",
+            today=date(2026, 3, 4),
+        )
+        fm = _parse_frontmatter(note)
+        assert fm["content_depth"] == "full_text"
+
 
 class TestBuildHypothesisNote:
     def test_full_structure(self):

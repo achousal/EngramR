@@ -45,6 +45,7 @@ def build_literature_note(
     source_type: str = "",
     key_points: list[str] | None = None,
     relevance: str = "",
+    content_depth: str = "abstract",
     today: date | None = None,
 ) -> str:
     """Build a literature note.
@@ -64,6 +65,8 @@ def build_literature_note(
             When None or empty, renders a single dash placeholder.
         relevance: Pre-populated relevance paragraph connecting to
             active research goals. When empty, renders an empty section.
+        content_depth: Source depth -- "stub", "abstract", or "full_text".
+            Defaults to "abstract".
         today: Date override for testing.
 
     Returns:
@@ -79,6 +82,7 @@ def build_literature_note(
         "authors": authors or [],
         "year": str(year),
         "journal": journal,
+        "content_depth": content_depth,
         "tags": ["literature"] + source_tags + (tags or []),
         "status": "unread",
         "created": d.isoformat(),

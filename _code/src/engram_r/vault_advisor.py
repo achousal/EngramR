@@ -121,6 +121,7 @@ class VaultSnapshot:
     hypothesis_count: int = 0
     has_recent_reduce: bool = False
     queue_blocked_count: int = 0
+    doi_stub_count: int = 0
 
 
 # ---------------------------------------------------------------------------
@@ -157,6 +158,44 @@ def _has_recent_reduce(vault_path: Path, window_hours: int = 24) -> bool:
     return False
 
 
+def _count_doi_stubs(inbox_dir: Path) -> int:
+    """Count inbox files that are DOI stubs needing enrichment.
+
+    Lightweight scan: reads first 500 chars per file, checks for
+    source_type: import + DOI URL + no content_depth field.
+    """
+    if not inbox_dir.is_dir():
+        return 0
+    count = 0
+    for f in inbox_dir.iterdir():
+        if f.suffix != ".md" or f.name.startswith("."):
+            continue
+        try:
+            text = f.read_text(errors="replace")[:500]
+        except OSError:
+            continue
+        fm_match = _FM_RE.match(text)
+        if not fm_match:
+            continue
+        try:
+            fm = yaml.safe_load(fm_match.group(1))
+            if not isinstance(fm, dict):
+                continue
+        except yaml.YAMLError:
+            continue
+        if fm.get("source_type") != "import":
+            continue
+        # Has a DOI URL?
+        source_url = fm.get("source_url", "")
+        if "10." not in source_url:
+            continue
+        # Already enriched?
+        if fm.get("content_depth"):
+            continue
+        count += 1
+    return count
+
+
 def build_vault_snapshot(vault_path: Path) -> VaultSnapshot:
     """Build a lightweight vault state snapshot for session tip detection."""
     queue_file = vault_path / "ops" / "queue" / "queue.json"
@@ -178,6 +217,7 @@ def build_vault_snapshot(vault_path: Path) -> VaultSnapshot:
         ),
         has_recent_reduce=_has_recent_reduce(vault_path),
         queue_blocked_count=blocked,
+        doi_stub_count=_count_doi_stubs(vault_path / "inbox"),
     )
 
 
@@ -189,6 +229,24 @@ def build_vault_snapshot(vault_path: Path) -> VaultSnapshot:
 def detect_session_tips(snapshot: VaultSnapshot) -> list[SessionTip]:
     """Detect session tips from vault state. Returns sorted by priority."""
     tips: list[SessionTip] = []
+
+    # Tip 0: enrich_stubs -- DOI stubs need abstract enrichment
+    if snapshot.doi_stub_count > 0:
+        tips.append(
+            SessionTip(
+                tip_id="enrich_stubs",
+                message=(
+                    f"/enrich-stubs -- {snapshot.doi_stub_count} inbox DOI "
+                    "stub(s) need abstract enrichment before /reduce"
+                ),
+                rationale=(
+                    "DOI stubs from lab imports have no abstracts. "
+                    "Enriching fetches abstracts from S2/PubMed for "
+                    "meaningful extraction by /reduce."
+                ),
+                priority=0,
+            )
+        )
 
     # Tip 1: reduce_inbox -- inbox has items and no recent reduce activity
     if snapshot.inbox_count > 0 and not snapshot.has_recent_reduce:
