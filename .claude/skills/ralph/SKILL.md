@@ -38,14 +38,9 @@ ADVISOR=$(cd _code && uv run python -m engram_r.vault_advisor "$VAULT_PATH" \
 ADVISOR_EXIT=$?
 ```
 
-If `$ADVISOR_EXIT` is 0 and `$ADVISOR` contains suggestions with `channel: "pipeline_tip"`, display them as a Pipeline Advisory block:
+Store any pipeline tips internally for use in Step 3 (the overview merges them into the blocked/actionable summary). Do NOT display a separate Pipeline Advisory block.
 
-```
-[Pipeline Advisory]
-- {tip message} ({tip rationale})
-```
-
-If the advisor fails or returns no pipeline tips, proceed silently. Pipeline tips are displayed for transparency -- the actual enforcement is in the Phase Eligibility Gate (Step 2).
+If the advisor fails or returns no pipeline tips, proceed silently.
 
 **0b. Abstract-Only Source Advisory**
 
@@ -156,16 +151,9 @@ Enforce phase ordering across all pending tasks. Later phases cannot run while e
 3. `extract` and `verify` tasks are **never blocked** by this gate. Extract is upstream of everything; verify is a quality check that does not create new connections.
 4. Remove ineligible tasks from the actionable list.
 
-If the gate removes tasks that would otherwise match a `--type` filter, report what was blocked and why:
-```
-[Phase Gate] {N} {phase} task(s) held back -- {M} {earlier_phase} task(s) must complete first.
-```
+Do NOT display verbose phase gate messages here. Gate results are folded into the compact overview in Step 3.
 
-If the gate removes ALL actionable tasks, report the blockage and suggest processing the earlier phase:
-```
-[Phase Gate] All requested tasks blocked. {M} {earlier_phase} task(s) must complete first.
-Suggested: /ralph {M} --type {earlier_phase}
-```
+If the gate removes ALL actionable tasks, Step 3 will show the blockage and suggest processing the earlier phase.
 
 **Batch Grouping (after filtering):**
 
@@ -183,21 +171,40 @@ The `phase_order` header defines the phase sequence:
 
 ## Step 3: Queue Overview
 
-Show the queue overview:
+Show the compact queue overview. Merge phase gate results, pipeline advisory tips, and actionable state into a single block:
 
 ```
 --=={ ralph }==--
 
-Queue: X total tasks (Y pending, Z done, B blocked on stubs)
+Queue: X pending, Y done
+Actionable: {count} ({N} verify, {N} enrich, {N} extract, ...)
+Blocked: {N} reflect, {N} reweave -- {reason why, e.g. "35 enrich tasks must finish first so reflect sees the full claim surface"}
 
-Phase distribution:
-  Claims:       {create: N, reflect: N, reweave: N, verify: N}
-  Enrichments:  {enrich: N, reflect: N, reweave: N, verify: N}
-
-Next tasks to process:
-1. {id} — phase: {current_phase} — {target}
-2. {id} — phase: {current_phase} — {target}
+Next:
+1. {id} -- {current_phase} -- {target (truncated)}
+2. {id} -- {current_phase} -- {target (truncated)}
 ...
+
+Options:
+- /ralph {N} --type enrich -- clear enrich backlog (unlocks reflect)
+- /ralph {N} --type verify -- clear verify backlog
+- /ralph {N} -- all eligible tasks
+```
+
+**Formatting rules:**
+- `Actionable` line: only list phases that have >0 actionable tasks.
+- `Blocked` line: only show if tasks were blocked by the phase gate. Include a SHORT rationale (one clause, not a paragraph) explaining why the earlier phase must finish first. If nothing is blocked, omit the line entirely.
+- `Next` list: show up to 8 tasks. Truncate claim titles to ~60 chars with `...`.
+- `Options`: show 2-4 concrete commands based on the actionable phase distribution. Include a brief label for what each does. **Order by strategic impact**: phases that unblock downstream work first (e.g., enrich before verify), terminal phases last.
+
+**If all tasks blocked:**
+```
+--=={ ralph }==--
+
+Queue: X pending, Y done
+Blocked: all {N} tasks at {phase} -- {M} {earlier_phase} must finish first
+
+Suggested: /ralph {M} --type {earlier_phase}
 ```
 
 **If `--dry-run`:** STOP here. Do not process.
