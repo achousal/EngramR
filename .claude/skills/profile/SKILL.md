@@ -41,7 +41,7 @@ Detailed schemas and prompts live in `reference/` files that sub-skill agents Re
 
 Before routing, check if a profile is already active:
 ```bash
-cd /Users/andreschousal/EngramR && uv run --directory _code python -c "
+cd "$(pwd)" && uv run --directory _code python -c "
 import sys; sys.path.insert(0, 'src')
 from engram_r.domain_profile import get_active_profile
 p = get_active_profile('../ops/config.yaml')
@@ -122,7 +122,7 @@ Present the returned profile summary to the user. Done.
 
 1. Verify the profile exists:
 ```bash
-cd /Users/andreschousal/EngramR && uv run --directory _code python -c "
+cd "$(pwd)" && uv run --directory _code python -c "
 import sys; sys.path.insert(0, 'src')
 from engram_r.domain_profile import load_profile
 p = load_profile('{name}')
@@ -141,7 +141,7 @@ print(f'Found: {p.name} -- {p.description}')
 
 4. Apply:
 ```bash
-cd /Users/andreschousal/EngramR && uv run --directory _code python -c "
+cd "$(pwd)" && uv run --directory _code python -c "
 import sys; sys.path.insert(0, 'src')
 from engram_r.domain_profile import load_profile, apply_profile_config, merge_profile_palettes
 p = load_profile('{name}')
@@ -201,7 +201,7 @@ After user responds:
 1. Validate name is machine-safe (lowercase, hyphens, alphanumeric)
 2. Check for name collision:
 ```bash
-cd /Users/andreschousal/EngramR && uv run --directory _code python -c "
+cd "$(pwd)" && uv run --directory _code python -c "
 import sys; sys.path.insert(0, 'src')
 from engram_r.domain_profile import discover_profiles
 profiles = discover_profiles()
@@ -325,7 +325,7 @@ Ask the user: "Activate this profile now? This updates ops/config.yaml and merge
 
 If yes:
 ```bash
-cd /Users/andreschousal/EngramR && uv run --directory _code python -c "
+cd "$(pwd)" && uv run --directory _code python -c "
 import sys; sys.path.insert(0, 'src')
 from engram_r.domain_profile import load_profile, apply_profile_config, merge_profile_palettes
 p = load_profile('{profile_name}')

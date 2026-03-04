@@ -25,7 +25,6 @@ import re
 import sys
 from pathlib import Path
 
-import yaml  # noqa: F401 -- used by schema_validator transitively
 
 # Add src to path so we can import engram_r
 _SCRIPT_DIR = Path(__file__).resolve().parent

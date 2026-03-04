@@ -82,15 +82,6 @@ def _read_frontmatter(path: Path) -> dict:
 # Task descriptor -- the JSON contract between scheduler and bash runner
 # ---------------------------------------------------------------------------
 
-UNATTENDED_PROMPT = (
-    "CRITICAL: You are running unattended as a daemon. There is NO human at "
-    "the terminal. NEVER use AskUserQuestion or EnterPlanMode -- these tools "
-    "are disabled and will hang forever. Make all decisions autonomously. "
-    "When a skill asks for user input, provide a reasonable default and "
-    "continue. When a skill presents a verdict for user override, accept it "
-    "and proceed."
-)
-
 
 @dataclass
 class DaemonTask:

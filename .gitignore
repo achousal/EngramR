@@ -95,6 +95,9 @@ profiles/*/styles/PLOT_DESIGN.md
 # Worktrees
 .claude/worktrees/
 
+# Backup files
+*.bak
+
 # Site
 site/node_modules/
 site/dist/
