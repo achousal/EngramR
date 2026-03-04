@@ -449,7 +449,10 @@ def check_queue_provenance(
             continue
 
         task_claim = fm.get("claim", "")
-        if isinstance(task_claim, str) and task_claim.strip().lower() == normalized_title:
+        if (
+            isinstance(task_claim, str)
+            and task_claim.strip().lower() == normalized_title
+        ):
             return ValidationResult(valid=True)
 
     return ValidationResult(
