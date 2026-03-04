@@ -24,6 +24,16 @@ Read the latest meta-review if available:
 ls -t _research/meta-reviews/*{goal-slug-fragment}*.md 2>/dev/null | head -1
 ```
 
+### 2a-bis. Topic Map Name Derivation
+
+The topic map for this goal's claims is the BROAD domain name, NOT the goal slug.
+- Read goal title and scope
+- Derive a broad territory name from the domain (the goal's subject area, not its action)
+- If a topic map with this name already exists in notes/, reuse it
+- If not, it will be created by init-wire when 5+ claims accumulate
+- Store as TOPIC_MAP_NAME for use in all Topics: footers
+- COLLISION CHECK: TOPIC_MAP_NAME must not match any filename in _research/goals/
+
 ### 2b. Core Questions
 
 The orchestrator collects 3-5 core scientific questions from the user per goal. These are passed as input to this sub-skill.

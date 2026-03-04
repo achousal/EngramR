@@ -60,6 +60,20 @@ Topics:
 
 Every claim must end with a `Topics:` section linking to at least one topic map.
 
+## Topic Map vs Goal Naming
+
+Topic maps and research goals serve different functions and MUST have distinct names.
+
+- **Topic maps** are broad navigation hubs named after the knowledge TERRITORY
+- **Research goals** are specific achievable objectives named after the WORK
+
+Pattern:
+  Topic map: "{domain area}" (broad, noun-phrase)
+  Goal: "{verb}-{target}-{method/context}" (specific, actionable)
+
+When generating claims, the Topics: footer references the BROAD topic map, never the goal slug.
+Before creating a goal file, verify no file with the same name exists in notes/.
+
 ## Critical Constraints
 
 - **User approval before every claim write.** The generation sub-skill returns claim content without writing. The orchestrator writes only approved claims after user review.

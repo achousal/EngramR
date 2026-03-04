@@ -182,6 +182,11 @@ After SELECTED_GOALS is built (whether from user selection or pre-populated by o
 
 Wait for response. If option 1, trim SELECTED_GOALS to the first 2. Store the original count as TOTAL_SELECTED for use in Phase 6.
 
+**Goal naming guidance:** Goal titles must be specific and actionable -- they describe work to be done.
+If a user proposes a broad domain label as a goal title, guide them toward specificity:
+the broad label is better suited as a topic map name.
+Check: goal slug must not collide with any existing file in notes/.
+
 **If user edits a goal:** Apply changes to the goal file in `_research/goals/` and update `self/goals.md` before proceeding. Re-present the edited goal for confirmation.
 
 **If user adds a new goal:** Create a new goal file following `_code/templates/research-goal.md`, update `self/goals.md`, then add it to SELECTED_GOALS.
