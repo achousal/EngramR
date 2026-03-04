@@ -123,6 +123,9 @@ class VaultSnapshot:
     has_recent_reduce: bool = False
     queue_blocked_count: int = 0
     abstract_only_source_count: int = 0
+    high_demand_abstract_sources: list[tuple[str, int]] = field(
+        default_factory=list
+    )
 
 
 # ---------------------------------------------------------------------------
@@ -191,6 +194,84 @@ def _count_abstract_only_sources(inbox_dir: Path) -> int:
     return count
 
 
+def _find_high_demand_abstract_sources(
+    vault_path: Path, threshold: int = 3
+) -> list[tuple[str, int]]:
+    """Find abstract-only literature sources cited by 3+ claims.
+
+    Scans ``_research/literature/`` for notes with
+    ``content_depth: abstract``, then counts how many ``notes/`` claims
+    reference each via ``source: "[[stem]]"`` in frontmatter.
+
+    Returns a list of ``(stem, cite_count)`` tuples for sources at or
+    above *threshold*, sorted descending by cite count.
+    """
+    lit_dir = vault_path / "_research" / "literature"
+    notes_dir = vault_path / "notes"
+    if not lit_dir.is_dir() or not notes_dir.is_dir():
+        return []
+
+    # Collect abstract-only literature stems
+    abstract_stems: set[str] = set()
+    for f in lit_dir.iterdir():
+        if f.suffix != ".md" or f.name.startswith((".", "_")):
+            continue
+        try:
+            text = f.read_text(errors="replace")[:500]
+        except OSError:
+            continue
+        fm_match = _FM_RE.match(text)
+        if not fm_match:
+            continue
+        try:
+            fm = yaml.safe_load(fm_match.group(1))
+            if not isinstance(fm, dict):
+                continue
+        except yaml.YAMLError:
+            continue
+        if fm.get("content_depth") == "abstract":
+            abstract_stems.add(f.stem)
+
+    if not abstract_stems:
+        return []
+
+    # Count citations from notes/ claims
+    cite_counts: dict[str, int] = {s: 0 for s in abstract_stems}
+    for f in notes_dir.iterdir():
+        if f.suffix != ".md" or f.name.startswith("."):
+            continue
+        try:
+            text = f.read_text(errors="replace")[:500]
+        except OSError:
+            continue
+        fm_match = _FM_RE.match(text)
+        if not fm_match:
+            continue
+        try:
+            fm = yaml.safe_load(fm_match.group(1))
+            if not isinstance(fm, dict):
+                continue
+        except yaml.YAMLError:
+            continue
+        source_val = fm.get("source", "")
+        if not isinstance(source_val, str):
+            continue
+        # Extract stem from wiki-link: source: "[[some-stem]]"
+        link_match = re.search(r"\[\[(.+?)]]", source_val)
+        if link_match:
+            linked_stem = link_match.group(1)
+            if linked_stem in cite_counts:
+                cite_counts[linked_stem] += 1
+
+    results = [
+        (stem, count)
+        for stem, count in cite_counts.items()
+        if count >= threshold
+    ]
+    results.sort(key=lambda x: x[1], reverse=True)
+    return results
+
+
 def build_vault_snapshot(vault_path: Path) -> VaultSnapshot:
     """Build a lightweight vault state snapshot for session tip detection."""
     queue_file = vault_path / "ops" / "queue" / "queue.json"
@@ -215,6 +296,9 @@ def build_vault_snapshot(vault_path: Path) -> VaultSnapshot:
         abstract_only_source_count=_count_abstract_only_sources(
             vault_path / "inbox"
         ),
+        high_demand_abstract_sources=_find_high_demand_abstract_sources(
+            vault_path
+        ),
     )
 
 
@@ -226,6 +310,53 @@ def build_vault_snapshot(vault_path: Path) -> VaultSnapshot:
 def detect_session_tips(snapshot: VaultSnapshot) -> list[SessionTip]:
     """Detect session tips from vault state. Returns sorted by priority."""
     tips: list[SessionTip] = []
+
+    # Tip: full_text_upgrade_demand -- heavily cited abstract-only sources
+    if snapshot.high_demand_abstract_sources:
+        top3 = snapshot.high_demand_abstract_sources[:3]
+        source_list = ", ".join(
+            f"[[{stem}]] ({count} claims)" for stem, count in top3
+        )
+        tips.append(
+            SessionTip(
+                tip_id="full_text_upgrade_demand",
+                message=(
+                    f"High-demand abstract-only sources need full text: "
+                    f"{source_list}"
+                ),
+                rationale=(
+                    "These abstract-only sources are heavily cited by "
+                    "claims. Full text would unlock methods, effect "
+                    "sizes, and evidence that abstract extraction "
+                    "cannot provide."
+                ),
+                priority=1,
+            )
+        )
+
+    # Tip: abstract_accumulation_warning -- many abstracts piling up
+    if (
+        snapshot.abstract_only_source_count >= 5
+        and not snapshot.has_recent_reduce
+    ):
+        n = snapshot.abstract_only_source_count
+        tips.append(
+            SessionTip(
+                tip_id="abstract_accumulation_warning",
+                message=(
+                    f"{n} abstract-only sources accumulating without "
+                    "processing. Drop full-text PDFs in inbox/ or run "
+                    "/reduce to extract what you have."
+                ),
+                rationale=(
+                    "Abstract-only sources yield orientation claims "
+                    "but accumulate a methods-and-evidence debt. "
+                    "Processing or upgrading prevents the backlog "
+                    "from growing stale."
+                ),
+                priority=1,
+            )
+        )
 
     # Tip: full_text_upgrade -- abstract-only sources could benefit from full text
     if snapshot.abstract_only_source_count > 0:

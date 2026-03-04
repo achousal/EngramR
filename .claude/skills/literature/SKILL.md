@@ -106,6 +106,12 @@ Read and follow `.claude/skills/literature/reference/setup-flow.md`.
 
 ## Search Workflow
 
+### When to Use /literature vs Full Text
+
+- **Surveying a topic (breadth):** Use `/literature` to find relevant papers, save abstract-only notes, and build orientation claims fast.
+- **Central paper to your argument (depth):** Drop the full-text PDF into `inbox/` and run `/pipeline`. Methods, effect sizes, and evidence require full text.
+- **Unsure:** Start with `/literature`. If a source accumulates 3+ citing claims, the system will flag it for full-text upgrade.
+
 ### Step 1: Source Resolution
 Read `ops/config.yaml` `literature:` section via `resolve_literature_sources()`. Returns enabled source list and default.
 
@@ -290,7 +296,8 @@ Pipeline chaining:
 - Queued: _research/literature/{note1}.md (reduce)
 - Queued: _research/literature/{note2}.md (reduce)
 {If abstract_count > 0:}
-  {abstract_count} note(s) queued at abstract scope.
+  {abstract_count} note(s) queued at abstract scope -- orientation claims only.
+  For methods, effect sizes, and evidence: drop full-text PDF in inbox/ and run /pipeline.
   /reduce will show upgrade path after processing.
 
 Next: /ralph {N}  -- process all queued literature notes (reduce -> reflect -> reweave -> verify, fresh context per phase)

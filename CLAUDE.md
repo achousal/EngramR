@@ -180,6 +180,7 @@ For pipeline phase details, see docs/manual/workflows.md.
 - **No hidden processing**: every automated action is logged and inspectable.
 - **Privacy**: never store content the user asks to forget. Never infer unshared information.
 - **Autonomy**: help the user think, not think for them. Present options, not directives.
+- **Source fidelity**: extracted claims must trace to text present in the source document. Model training knowledge must NEVER substitute for missing source content. Zero extraction from a thin source is correct; fabricated extraction is a provenance failure.
 
 ### Escalation Ceilings
 

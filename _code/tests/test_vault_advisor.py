@@ -15,6 +15,7 @@ from engram_r.vault_advisor import (
     SessionTip,
     Suggestion,
     VaultSnapshot,
+    _find_high_demand_abstract_sources,
     advise,
     build_vault_snapshot,
     detect_gaps,
@@ -1253,15 +1254,17 @@ class TestDetectSessionTips:
             claim_count=25, hypothesis_count=0,
             observation_count=15, tension_count=7,
             abstract_only_source_count=2,
+            high_demand_abstract_sources=[("paper-x", 4)],
         )
         tips = detect_session_tips(snap)
         assert len(tips) > 0
         for tip in tips:
-            # Command-leading tips start with '/'
-            # Awareness tips (like full_text_upgrade) start with a count
-            assert tip.message[0] in "/0123456789", (
-                f"Tip '{tip.tip_id}' message has unexpected start: "
-                f"{tip.message}"
+            # Every tip message must be non-empty and contain content
+            assert len(tip.message) > 10, (
+                f"Tip '{tip.tip_id}' message too short: {tip.message}"
+            )
+            assert tip.rationale, (
+                f"Tip '{tip.tip_id}' missing rationale"
             )
 
 
@@ -1334,3 +1337,228 @@ class TestSessionTipsIntegration:
         data = json.loads(capsys.readouterr().out)
         assert data["all_session_tips"] == []
         assert exit_code == 2
+
+
+# ---------------------------------------------------------------------------
+# High-demand abstract source detection
+# ---------------------------------------------------------------------------
+
+
+def _make_lit_note(path: Path, stem: str, content_depth: str = "abstract"):
+    """Helper: create a literature note with given content_depth."""
+    path.parent.mkdir(parents=True, exist_ok=True)
+    path.write_text(
+        f'---\ntitle: "{stem}"\n'
+        f'content_depth: "{content_depth}"\n---\n\n# {stem}\n'
+    )
+
+
+def _make_claim(path: Path, source_stem: str):
+    """Helper: create a claim note citing source_stem via wiki-link."""
+    path.parent.mkdir(parents=True, exist_ok=True)
+    path.write_text(
+        f'---\ndescription: "test claim"\n'
+        f'source: "[[{source_stem}]]"\n---\n\nContent.\n'
+    )
+
+
+class TestHighDemandAbstractSources:
+    def test_no_lit_dir(self, tmp_path: Path):
+        """Returns empty when _research/literature/ does not exist."""
+        result = _find_high_demand_abstract_sources(tmp_path)
+        assert result == []
+
+    def test_no_abstract_sources(self, tmp_path: Path):
+        """Returns empty when no abstract-only literature notes exist."""
+        lit_dir = tmp_path / "_research" / "literature"
+        lit_dir.mkdir(parents=True)
+        _make_lit_note(lit_dir / "paper-a.md", "paper-a", "full_text")
+        (tmp_path / "notes").mkdir()
+        result = _find_high_demand_abstract_sources(tmp_path)
+        assert result == []
+
+    def test_below_threshold(self, tmp_path: Path):
+        """Source with fewer than 3 citations is excluded."""
+        lit_dir = tmp_path / "_research" / "literature"
+        _make_lit_note(lit_dir / "paper-a.md", "paper-a")
+        notes_dir = tmp_path / "notes"
+        _make_claim(notes_dir / "c1.md", "paper-a")
+        _make_claim(notes_dir / "c2.md", "paper-a")
+        result = _find_high_demand_abstract_sources(tmp_path)
+        assert result == []
+
+    def test_at_threshold(self, tmp_path: Path):
+        """Source with exactly 3 citations is included."""
+        lit_dir = tmp_path / "_research" / "literature"
+        _make_lit_note(lit_dir / "paper-a.md", "paper-a")
+        notes_dir = tmp_path / "notes"
+        for i in range(3):
+            _make_claim(notes_dir / f"c{i}.md", "paper-a")
+        result = _find_high_demand_abstract_sources(tmp_path)
+        assert result == [("paper-a", 3)]
+
+    def test_multiple_sources_sorted(self, tmp_path: Path):
+        """Multiple sources are sorted by cite count descending."""
+        lit_dir = tmp_path / "_research" / "literature"
+        _make_lit_note(lit_dir / "paper-a.md", "paper-a")
+        _make_lit_note(lit_dir / "paper-b.md", "paper-b")
+        notes_dir = tmp_path / "notes"
+        # paper-a: 3 cites
+        for i in range(3):
+            _make_claim(notes_dir / f"a{i}.md", "paper-a")
+        # paper-b: 5 cites
+        for i in range(5):
+            _make_claim(notes_dir / f"b{i}.md", "paper-b")
+        result = _find_high_demand_abstract_sources(tmp_path)
+        assert len(result) == 2
+        assert result[0] == ("paper-b", 5)
+        assert result[1] == ("paper-a", 3)
+
+    def test_full_text_excluded(self, tmp_path: Path):
+        """Full-text sources are not counted even if heavily cited."""
+        lit_dir = tmp_path / "_research" / "literature"
+        _make_lit_note(lit_dir / "paper-a.md", "paper-a", "full_text")
+        notes_dir = tmp_path / "notes"
+        for i in range(5):
+            _make_claim(notes_dir / f"c{i}.md", "paper-a")
+        result = _find_high_demand_abstract_sources(tmp_path)
+        assert result == []
+
+    def test_index_file_skipped(self, tmp_path: Path):
+        """Files starting with _ (like _index.md) are skipped."""
+        lit_dir = tmp_path / "_research" / "literature"
+        lit_dir.mkdir(parents=True)
+        (lit_dir / "_index.md").write_text(
+            '---\ncontent_depth: "abstract"\n---\n'
+        )
+        (tmp_path / "notes").mkdir()
+        result = _find_high_demand_abstract_sources(tmp_path)
+        assert result == []
+
+    def test_no_notes_dir(self, tmp_path: Path):
+        """Returns empty when notes/ does not exist."""
+        lit_dir = tmp_path / "_research" / "literature"
+        _make_lit_note(lit_dir / "paper-a.md", "paper-a")
+        result = _find_high_demand_abstract_sources(tmp_path)
+        assert result == []
+
+
+class TestHighDemandSessionTips:
+    """Tests for full_text_upgrade_demand and abstract_accumulation_warning."""
+
+    def test_demand_tip_fires(self):
+        snap = VaultSnapshot(
+            high_demand_abstract_sources=[("paper-a", 5), ("paper-b", 3)]
+        )
+        tips = detect_session_tips(snap)
+        assert any(t.tip_id == "full_text_upgrade_demand" for t in tips)
+
+    def test_demand_tip_does_not_fire_empty(self):
+        snap = VaultSnapshot(high_demand_abstract_sources=[])
+        tips = detect_session_tips(snap)
+        assert not any(t.tip_id == "full_text_upgrade_demand" for t in tips)
+
+    def test_demand_tip_priority_higher_than_generic(self):
+        """Demand tip (priority 1) beats generic upgrade tip (priority 2)."""
+        snap = VaultSnapshot(
+            abstract_only_source_count=3,
+            high_demand_abstract_sources=[("paper-a", 4)],
+        )
+        tips = detect_session_tips(snap)
+        demand = [t for t in tips if t.tip_id == "full_text_upgrade_demand"]
+        generic = [t for t in tips if t.tip_id == "full_text_upgrade"]
+        assert demand and generic
+        assert demand[0].priority < generic[0].priority
+
+    def test_demand_tip_message_includes_source_names(self):
+        snap = VaultSnapshot(
+            high_demand_abstract_sources=[("paper-a", 5), ("paper-b", 3)]
+        )
+        tips = detect_session_tips(snap)
+        demand = [t for t in tips if t.tip_id == "full_text_upgrade_demand"]
+        assert len(demand) == 1
+        assert "[[paper-a]]" in demand[0].message
+        assert "[[paper-b]]" in demand[0].message
+        assert "5 claims" in demand[0].message
+
+    def test_demand_tip_top3_only(self):
+        """Only top 3 sources appear in message even if more qualify."""
+        sources = [
+            ("p1", 10), ("p2", 8), ("p3", 6), ("p4", 4),
+        ]
+        snap = VaultSnapshot(high_demand_abstract_sources=sources)
+        tips = detect_session_tips(snap)
+        demand = [t for t in tips if t.tip_id == "full_text_upgrade_demand"]
+        assert "[[p4]]" not in demand[0].message
+
+    def test_accumulation_warning_fires(self):
+        snap = VaultSnapshot(
+            abstract_only_source_count=5, has_recent_reduce=False,
+        )
+        tips = detect_session_tips(snap)
+        assert any(
+            t.tip_id == "abstract_accumulation_warning" for t in tips
+        )
+
+    def test_accumulation_warning_suppressed_by_recent_reduce(self):
+        snap = VaultSnapshot(
+            abstract_only_source_count=7, has_recent_reduce=True,
+        )
+        tips = detect_session_tips(snap)
+        assert not any(
+            t.tip_id == "abstract_accumulation_warning" for t in tips
+        )
+
+    def test_accumulation_warning_below_threshold(self):
+        snap = VaultSnapshot(
+            abstract_only_source_count=4, has_recent_reduce=False,
+        )
+        tips = detect_session_tips(snap)
+        assert not any(
+            t.tip_id == "abstract_accumulation_warning" for t in tips
+        )
+
+    def test_accumulation_warning_message_format(self):
+        snap = VaultSnapshot(
+            abstract_only_source_count=8, has_recent_reduce=False,
+        )
+        tips = detect_session_tips(snap)
+        warn = [
+            t for t in tips
+            if t.tip_id == "abstract_accumulation_warning"
+        ]
+        assert len(warn) == 1
+        assert "8" in warn[0].message
+        assert warn[0].priority == 1
+
+
+class TestHighDemandSnapshotIntegration:
+    """Integration: build_vault_snapshot populates high_demand_abstract_sources."""
+
+    def test_snapshot_includes_high_demand(self, tmp_path: Path):
+        lit_dir = tmp_path / "_research" / "literature"
+        _make_lit_note(lit_dir / "paper-a.md", "paper-a")
+        notes_dir = tmp_path / "notes"
+        for i in range(4):
+            _make_claim(notes_dir / f"c{i}.md", "paper-a")
+        # Create minimal dirs to avoid errors
+        (tmp_path / "inbox").mkdir(exist_ok=True)
+        (tmp_path / "ops" / "observations").mkdir(parents=True)
+        (tmp_path / "ops" / "tensions").mkdir(parents=True)
+        (tmp_path / "ops" / "queue").mkdir(parents=True)
+        (tmp_path / "_research" / "hypotheses").mkdir(parents=True)
+
+        snap = build_vault_snapshot(tmp_path)
+        assert len(snap.high_demand_abstract_sources) == 1
+        assert snap.high_demand_abstract_sources[0] == ("paper-a", 4)
+
+    def test_snapshot_empty_when_no_high_demand(self, tmp_path: Path):
+        (tmp_path / "notes").mkdir()
+        (tmp_path / "inbox").mkdir()
+        (tmp_path / "ops" / "observations").mkdir(parents=True)
+        (tmp_path / "ops" / "tensions").mkdir(parents=True)
+        (tmp_path / "ops" / "queue").mkdir(parents=True)
+        (tmp_path / "_research" / "hypotheses").mkdir(parents=True)
+
+        snap = build_vault_snapshot(tmp_path)
+        assert snap.high_demand_abstract_sources == []

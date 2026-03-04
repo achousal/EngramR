@@ -29,6 +29,23 @@ Read these files to configure domain-specific behavior:
    - `scope: abstract_only` restricts extraction to `claims`, `evidence`, and `open-questions` only (no methods, design-patterns, or contradictions). This scope is auto-set for abstract-only sources.
    - Other categories are **scope-filtered** (not counted as skips in skip-rate denominator)
    - Read `content_depth` from YAML frontmatter: `stub`, `abstract`, or `full_text`
+   - `scope: stub` -- source has no abstract. Extract at most 1 title-level claim. Do NOT attempt content extraction.
+
+### Stub Source Hard Stop
+
+If `content_depth` is `stub` OR the source file body (excluding frontmatter) is under 30 lines with no `## Abstract` section containing text:
+
+HARD STOP. Do not extract claims. Do not synthesize content from model knowledge.
+
+Output:
+```
+[Stub source] No extractable content in {source}. content_depth={value}.
+Zero claims produced. Re-seed with full text or abstract before processing.
+```
+
+Mark extract task done with zero claims. Output zero-claim handoff block. STOP.
+
+This is NOT a bug. Zero extraction from a stub is CORRECT behavior.
 
 If these files don't exist (pre-init invocation or standalone use), use universal defaults:
 - depth: standard
@@ -658,6 +675,21 @@ Each enrichment task specifies:
 - **Source lines:** Where in the source the enrichment content is found
 
 **The enrichment default:** When in doubt between "new claim" and "enrichment to existing claim", lean toward enrichment — BUT only after confirming the target exists. If the target does not exist, the default flips: extract as a new claim.
+
+---
+
+## Source Fidelity Constraint (overrides all extraction pressure)
+
+Every claim, finding, number, and methodology detail you extract MUST appear in the source text you were given to read. If information is not present in the source document, you MUST NOT include it in any extracted claim -- even if you know the information from training data.
+
+This means:
+- If the source contains only a title and URL: extract at most 1 claim from the title
+- If the source contains only an abstract: extract only what the abstract states
+- NEVER supplement source content with model knowledge of the paper
+- NEVER infer specific numbers (N, AUC, p-values, effect sizes) not present in the source
+- NEVER add methodology details (statistical methods, cohort characteristics) not in the source
+
+Violation of this constraint is a PROVENANCE FAILURE -- worse than zero extraction. Zero extraction from a thin source is correct. Fabricated extraction from model memory is catastrophic.
 
 ---
 
