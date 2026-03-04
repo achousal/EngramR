@@ -10,7 +10,7 @@ import pytest
 from engram_r.daemon_config import DaemonConfig
 from engram_r.vault_advisor import (
     GoalProfile,
-    PipelineTip,
+    PhaseTip,
     QueuePhaseState,
     SessionTip,
     Suggestion,
@@ -19,9 +19,9 @@ from engram_r.vault_advisor import (
     advise,
     build_vault_snapshot,
     detect_gaps,
-    detect_pipeline_tips,
+    detect_phase_tips,
     detect_session_tips,
-    generate_pipeline_suggestions,
+    generate_phase_suggestions,
     generate_session_suggestions,
     generate_suggestions,
     load_cache,
@@ -692,11 +692,11 @@ class TestScanQueuePhases:
 
 
 # ---------------------------------------------------------------------------
-# TestDetectPipelineTips
+# TestDetectPhaseTips
 # ---------------------------------------------------------------------------
 
 
-class TestDetectPipelineTips:
+class TestDetectPhaseTips:
     def test_reduce_before_reflect(self):
         """2 sources, one create-pending + one reflect-pending -> tip."""
         state = QueuePhaseState(
@@ -706,7 +706,7 @@ class TestDetectPipelineTips:
             sources_with_pending_create={"source-a"},
             sources_with_pending_reflect={"source-b", "source-a"},
         )
-        tips = detect_pipeline_tips(state)
+        tips = detect_phase_tips(state)
         tip_ids = [t.tip_id for t in tips]
         assert "reduce_before_reflect" in tip_ids
 
@@ -720,7 +720,7 @@ class TestDetectPipelineTips:
             sources_with_pending_enrich={"source-c"},
             sources_with_pending_reflect={"source-a", "source-b"},
         )
-        tips = detect_pipeline_tips(state)
+        tips = detect_phase_tips(state)
         tip_ids = [t.tip_id for t in tips]
         assert "reduce_before_reflect" in tip_ids
         # Message should say "enrich" not "reduce/create"
@@ -738,7 +738,7 @@ class TestDetectPipelineTips:
             sources_with_pending_enrich=set(),
             sources_with_pending_reflect={"source-a", "source-b"},
         )
-        tips = detect_pipeline_tips(state)
+        tips = detect_phase_tips(state)
         tip_ids = [t.tip_id for t in tips]
         assert "batch_reflect_ready" in tip_ids
         assert "reduce_before_reflect" not in tip_ids
@@ -753,7 +753,7 @@ class TestDetectPipelineTips:
             sources_with_pending_enrich={"source-b"},
             sources_with_pending_reflect={"source-a", "source-b"},
         )
-        tips = detect_pipeline_tips(state)
+        tips = detect_phase_tips(state)
         tip_ids = [t.tip_id for t in tips]
         assert "batch_reflect_ready" not in tip_ids
         assert "reduce_before_reflect" in tip_ids
@@ -768,7 +768,7 @@ class TestDetectPipelineTips:
             sources_with_pending_reflect={"source-a"},
             sources_with_pending_reweave={"source-a"},
         )
-        tips = detect_pipeline_tips(state)
+        tips = detect_phase_tips(state)
         tip_ids = [t.tip_id for t in tips]
         assert "reweave_after_reflect" in tip_ids
 
@@ -781,7 +781,7 @@ class TestDetectPipelineTips:
             sources_with_pending_create=set(),
             sources_with_pending_reflect={"source-a"},
         )
-        tips = detect_pipeline_tips(state)
+        tips = detect_phase_tips(state)
         tip_ids = [t.tip_id for t in tips]
         # batch_reflect_ready requires 2+ sources
         assert "batch_reflect_ready" not in tip_ids
@@ -796,16 +796,16 @@ class TestDetectPipelineTips:
             sources_with_pending_create=set(),
             sources_with_pending_reflect=set(),
         )
-        tips = detect_pipeline_tips(state)
+        tips = detect_phase_tips(state)
         assert tips == []
 
 
 # ---------------------------------------------------------------------------
-# TestPipelineTipsIntegration
+# TestPhaseTipsIntegration
 # ---------------------------------------------------------------------------
 
 
-class TestPipelineTipsIntegration:
+class TestPhaseTipsIntegration:
     def _make_vault_with_queue(self, tmp_path, create_pending=True, reflect_pending=True):
         """Build a vault with goals and queue task files at mixed phases."""
         # Goals (for goal_frontier channel)
@@ -849,66 +849,66 @@ class TestPipelineTipsIntegration:
 
         return tmp_path
 
-    def test_pipeline_tips_in_advise(self, tmp_path):
+    def test_phase_tips_in_advise(self, tmp_path):
         vault = self._make_vault_with_queue(tmp_path)
         suggestions, cached = advise(
             vault,
             context="ralph",
             no_cache=True,
-            include_pipeline_tips=True,
+            include_phase_tips=True,
         )
         channels = [s.channel for s in suggestions]
-        assert "pipeline_tip" in channels
+        assert "phase_tip" in channels
 
-    def test_pipeline_tip_priority(self, tmp_path):
-        """Pipeline tips sort before goal suggestions (priority 0 < goal rank*10)."""
+    def test_phase_tip_priority(self, tmp_path):
+        """Phase tips sort before goal suggestions (priority 0 < goal rank*10)."""
         vault = self._make_vault_with_queue(tmp_path)
         suggestions, _ = advise(
             vault,
             context="ralph",
             no_cache=True,
-            include_pipeline_tips=True,
+            include_phase_tips=True,
             max_suggestions=10,
         )
-        pipeline = [s for s in suggestions if s.channel == "pipeline_tip"]
+        phase = [s for s in suggestions if s.channel == "phase_tip"]
         goal = [s for s in suggestions if s.channel == "goal_frontier"]
-        if pipeline and goal:
-            assert max(s.priority for s in pipeline) <= min(
+        if phase and goal:
+            assert max(s.priority for s in phase) <= min(
                 s.priority for s in goal
             )
 
-    def test_no_pipeline_tips_without_flag(self, tmp_path):
+    def test_no_phase_tips_without_flag(self, tmp_path):
         vault = self._make_vault_with_queue(tmp_path)
         suggestions, _ = advise(
             vault,
             context="literature",
             no_cache=True,
-            include_pipeline_tips=False,
+            include_phase_tips=False,
         )
         channels = [s.channel for s in suggestions]
-        assert "pipeline_tip" not in channels
+        assert "phase_tip" not in channels
 
     def test_cli_ralph_context(self, tmp_path, capsys):
-        """--context ralph auto-enables pipeline tips."""
+        """--context ralph auto-enables phase tips."""
         vault = self._make_vault_with_queue(tmp_path)
         exit_code = main([str(vault), "--context", "ralph", "--no-cache"])
         captured = capsys.readouterr()
         data = json.loads(captured.out)
         channels = [s["channel"] for s in data["suggestions"]]
-        assert "pipeline_tip" in channels
+        assert "phase_tip" in channels
 
-    def test_cli_explicit_pipeline_tips_flag(self, tmp_path, capsys):
-        """--include-pipeline-tips flag works with any context."""
+    def test_cli_explicit_phase_tips_flag(self, tmp_path, capsys):
+        """--include-phase-tips flag works with any context."""
         vault = self._make_vault_with_queue(tmp_path)
         main([
             str(vault),
             "--context", "literature",
-            "--include-pipeline-tips",
+            "--include-phase-tips",
             "--no-cache",
         ])
         data = json.loads(capsys.readouterr().out)
         channels = [s["channel"] for s in data["suggestions"]]
-        assert "pipeline_tip" in channels
+        assert "phase_tip" in channels
 
 
 # ---------------------------------------------------------------------------

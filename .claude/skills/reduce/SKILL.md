@@ -62,7 +62,7 @@ No pre-extraction advisory is shown -- value before noise. After extraction comp
   - Methods and experimental protocols
   - Design patterns and methodology comparisons
   - Contradictions and tensions with other sources
-Import full text to inbox/ and re-run /pipeline to upgrade.
+Import full text to inbox/ and re-run /seed then /ralph to upgrade.
 ```
 
 For `content_depth: stub`: no special advisory (stubs are auto-enriched by /seed now).

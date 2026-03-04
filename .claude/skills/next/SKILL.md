@@ -97,17 +97,17 @@ If the advisor fails or returns no suggestions (`exit 2`), proceed without them.
 
 For `/generate` recommendations, use `--context generate` instead of `--context literature`.
 
-**Pipeline tips enrichment:** When the engine recommendation involves `/ralph` or queue processing, also call the advisor with pipeline tips:
+**Phase ordering tips enrichment:** When the engine recommendation involves `/ralph` or queue processing, also call the advisor with phase tips:
 
 ```bash
 ADVISOR=$(cd _code && uv run python -m engram_r.vault_advisor "$VAULT_PATH" \
-    --context ralph --include-pipeline-tips --max 4 2>/dev/null)
+    --context ralph --include-phase-tips --max 4 2>/dev/null)
 ```
 
-If pipeline tips are present (channel `pipeline_tip`), show them before the recommendation:
+If phase tips are present (channel `phase_tip`), show them before the recommendation:
 
 ```
-  Pipeline advisory:
+  Phase advisory:
     - [tip message]
 ```
 
@@ -260,7 +260,7 @@ Append to `ops/next-log.md` (create if missing):
 
 If 0 claims and 0 inbox, recommend `/onboard` first -- it creates project notes, data inventory, research goals, and vault wiring that everything else builds on. After onboarding, recommend `/init` to seed orientation claims and methodological foundations. Maintenance is premature with < 5 notes.
 
-After /init, if inbox is empty and no literature notes exist, recommend adding 3-5 foundational papers to inbox/ and running /pipeline before /literature. Known papers (lab publications, grant references) build the graph scaffolding that makes /literature results connectable. Process in small batches -- do not queue more than ~10 unprocessed items. After /literature creates literature notes, recommend /ralph to process them through the queue before /research.
+After /init, if inbox is empty and no literature notes exist, recommend adding 3-5 foundational papers to inbox/ and running /seed then /ralph before /literature. Known papers (lab publications, grant references) build the graph scaffolding that makes /literature results connectable. Process in small batches -- do not queue more than ~10 unprocessed items. After /literature creates literature notes, recommend /ralph to process them through the queue before /research.
 
 ### Everything Clean
 

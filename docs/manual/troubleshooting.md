@@ -174,7 +174,7 @@ The session-orient hook reports inbox item count at every session start and flag
 
 **Catch-up mode:**
 1. Temporarily set `processing.depth: quick` in ops/config.yaml.
-2. Run `/pipeline all` for batch processing.
+2. Run `/seed --all` then `/ralph N` for batch processing.
 3. Return to `standard` depth after clearing the backlog.
 
 **Structural fix:**

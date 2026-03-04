@@ -1267,7 +1267,7 @@ def _check_p1(state: VaultState, config: DaemonConfig) -> DaemonTask | None:
 
 
 def _check_p2(state: VaultState, config: DaemonConfig) -> DaemonTask | None:
-    """P2: Knowledge maintenance -- rethink, reflect/reweave pipeline."""
+    """P2: Knowledge maintenance -- rethink, reflect/reweave phases."""
     if state.observation_count >= config.thresholds.observations_rethink:
         return DaemonTask(
             skill="rethink",
@@ -1337,12 +1337,12 @@ def _check_p2(state: VaultState, config: DaemonConfig) -> DaemonTask | None:
 
 
 def _check_p2_5(state: VaultState, config: DaemonConfig) -> DaemonTask | None:
-    """P2.5: Inbox processing -- full pipeline via /ralph.
+    """P2.5: Inbox processing -- seed + ralph.
 
     Seeds the oldest inbox file (inline, no /seed invocation to avoid
     interactive duplicate-confirmation), then processes through the full
-    claim pipeline (extract -> create -> reflect -> reweave -> verify).
-    No quarantine -- the full pipeline IS the quality gate.
+    claim phases (extract -> create -> reflect -> reweave -> verify).
+    No quarantine -- the full phase chain IS the quality gate.
     """
     if state.inbox_count > 0:
         return DaemonTask(
@@ -1353,8 +1353,8 @@ def _check_p2_5(state: VaultState, config: DaemonConfig) -> DaemonTask | None:
             task_key="p2.5-ralph-inbox",
             prompt=(
                 f"{_SKILL_PREAMBLE}\n\n"
-                f"Your task: Process the oldest inbox item through the "
-                f"full pipeline.\n\n"
+                f"Your task: Process the oldest inbox item through "
+                f"seed + ralph.\n\n"
                 f"There are {state.inbox_count} items in inbox/.\n\n"
                 f"Step 1 -- Inline seed (do NOT invoke /seed -- it has "
                 f"interactive duplicate-confirmation that hangs in daemon "

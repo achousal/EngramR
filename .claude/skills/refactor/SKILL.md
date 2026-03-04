@@ -247,11 +247,11 @@ For each skill affected by the dimension changes:
 | Dimension Change | Skills to Regenerate |
 |-----------------|---------------------|
 | Granularity | /reduce, /verify, /validate |
-| Processing | /reduce, /reflect, /reweave, /verify, /ralph, /pipeline |
+| Processing | /reduce, /reflect, /reweave, /verify, /ralph |
 | Linking | /reflect, /reweave |
 | Navigation | /reflect (MOC update logic) |
 | Schema | /validate, /verify |
-| Automation | /ralph, /pipeline (chaining mode) |
+| Automation | /ralph, /seed --all |
 | Maintenance | /health |
 
 ### 4c. Update Context File

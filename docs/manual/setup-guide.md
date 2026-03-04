@@ -169,7 +169,6 @@ If you used `--starter`, these core skills are installed:
 | `/stats` | Show vault statistics |
 | `/graph` | Interactive graph analysis |
 | `/tasks` | View and manage the task stack |
-| `/pipeline` | End-to-end source processing |
 
 The full skill set adds the remaining skills for the co-scientist pipeline (hypothesis generation, tournaments, literature search, experimental design, etc.). Re-run the scaffolder without `--starter` to add them later.
 

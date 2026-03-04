@@ -104,15 +104,15 @@ tags: [project, {lab_slug}]
 Topics:
 ```
 
-### 5a2. Internal Doc Discovery (auto-selected, no per-project checklist)
+### 5a2. Internal Doc Discovery (scan scope only)
 
-After generating the base project note, scan the project directory for internal documentation that should be wiki-linked from the project note.
+After generating the base project note, scan the project directory to determine `scan_dirs` for future `--update` runs. Do NOT generate wiki links to external project files.
 
 **Discovery (config-driven):**
 
 Build the `find` command dynamically from ONBOARD_CONFIG (loaded in Step 0) and per-project scope:
 
-1. **Determine scan targets.** If the project note has `scan_dirs` set (non-empty list from a previous `--update` run), restrict find to those directories only. If `scan_dirs` is empty (first onboard), scan the full project tree:
+1. **Determine scan targets.** If the project note has `scan_dirs` set (non-empty list from a previous `--update` run), keep them. If `scan_dirs` is empty (first onboard), scan the full project tree:
    ```bash
    find {project_path} -maxdepth {ONBOARD_CONFIG.scan_depth} -name '*.md' ...
    ```
@@ -129,35 +129,13 @@ Build the `find` command dynamically from ONBOARD_CONFIG (loaded in Step 0) and 
    - `CLAUDE.md` (already transcluded in the project note)
    - Files whose basename matches any entry in `ONBOARD_CONFIG.exclude_files`
 
-**Auto-selection (no per-project user prompt):**
-
-Classify each discovered file and auto-select research docs:
-
-| Group | Rule | Action |
-|---|---|---|
-| **Research docs** | Path contains `/analysis/`, `/scripts/`, `/src/`, `/R/`, `/notebooks/`, `/results/`, `/reports/` | Auto-include |
-| **Infrastructure** | Path contains `/man/`, `/vignettes/`, `/docs/api/`, `/docs/reference/`; or basename matches `ONBOARD_CONFIG.exclude_files` | Skip |
-| **Other** | Everything else | Skip |
-
-**No per-project doc checklist.** Research docs are auto-selected. Mention what was included in the summary. User can adjust later via `--update`.
-
 **Persist scan scope:**
 Extract the set of unique top-level directories (relative to project root) from selected files. Save as `scan_dirs` in project note frontmatter. Future `--update` runs use this whitelist automatically.
 
-**Generate Key Docs section:**
-For each selected doc, append a `## Key Docs` section to the project note body (after the `![[_dev/{tag}/CLAUDE.md]]` line):
-
-```markdown
-## Key Docs
-- [[ARCHITECTURE]] -- system architecture and module boundaries
-- [[README_FACTORIAL]] -- 2x2x2 factorial experiment design
-```
-
-Context phrases are **required** for every entry (same convention as topic map Core Ideas). A bare link list is insufficient.
+**IMPORTANT: No Key Docs section.** Do NOT generate `## Key Docs` with wiki links to external project files. External docs live outside the vault and wiki links to them either dangle or collide with vault-internal files (e.g. `[[README]]` resolving to the vault root README, `[[ARCHITECTURE]]` resolving to `docs/manual/architecture.md`). Project context is already available via the `![[_dev/{tag}/CLAUDE.md]]` transclusion.
 
 **Skip conditions:**
 - If no `.md` files found besides CLAUDE.md, skip this step silently.
-- If no files match the research docs classification, skip without adding the section.
 
 Save to: `projects/{lab_slug}/{tag}.md` (matching existing convention: `projects/lab-a/`, `projects/lab-b/`).
 

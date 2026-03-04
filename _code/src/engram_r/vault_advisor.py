@@ -91,8 +91,8 @@ class QueuePhaseState:
 
 
 @dataclass
-class PipelineTip:
-    """A pipeline ordering tip detected from queue phase state."""
+class PhaseTip:
+    """A phase ordering tip detected from queue phase state."""
 
     tip_id: str
     message: str
@@ -421,7 +421,7 @@ def detect_session_tips(snapshot: VaultSnapshot) -> list[SessionTip]:
                     "blocked queue task(s) need stub content before /ralph"
                 ),
                 rationale=(
-                    "Blocked tasks cannot proceed through the pipeline "
+                    "Blocked tasks cannot proceed through the phases "
                     "until their literature stubs are populated. Running "
                     "/literature unblocks them for /ralph processing."
                 ),
@@ -753,7 +753,7 @@ def generate_suggestions(
 
 
 # ---------------------------------------------------------------------------
-# Pipeline tip scanning (Phase 2 channel)
+# Phase tip scanning (Phase 2 channel)
 # ---------------------------------------------------------------------------
 
 _PLACEHOLDER_RE = re.compile(r"\(to be filled by", re.IGNORECASE)
@@ -904,12 +904,12 @@ def scan_extract_scopes(vault_path: Path) -> dict[str, str]:
     return result
 
 
-def detect_pipeline_tips(phase_state: QueuePhaseState) -> list[PipelineTip]:
-    """Detect pipeline ordering opportunities from queue phase state.
+def detect_phase_tips(phase_state: QueuePhaseState) -> list[PhaseTip]:
+    """Detect phase ordering opportunities from queue phase state.
 
     Returns tips sorted by priority (lower = more urgent).
     """
-    tips: list[PipelineTip] = []
+    tips: list[PhaseTip] = []
 
     # Combine create + enrich as pre-reflect phases
     pre_reflect_sources = (
@@ -935,7 +935,7 @@ def detect_pipeline_tips(phase_state: QueuePhaseState) -> list[PipelineTip]:
         n_pre = len(pre_reflect_sources)
         n_reflect = len(phase_state.sources_with_pending_reflect)
         tips.append(
-            PipelineTip(
+            PhaseTip(
                 tip_id="reduce_before_reflect",
                 message=(
                     f"Complete all {phase_label} phases "
@@ -960,7 +960,7 @@ def detect_pipeline_tips(phase_state: QueuePhaseState) -> list[PipelineTip]:
     ):
         n_sources = len(phase_state.sources_with_pending_reflect)
         tips.append(
-            PipelineTip(
+            PhaseTip(
                 tip_id="batch_reflect_ready",
                 message=(
                     f"All reductions complete across {n_sources} sources. "
@@ -981,7 +981,7 @@ def detect_pipeline_tips(phase_state: QueuePhaseState) -> list[PipelineTip]:
         and len(phase_state.sources_with_pending_reweave) > 0
     ):
         tips.append(
-            PipelineTip(
+            PhaseTip(
                 tip_id="reweave_after_reflect",
                 message=(
                     "Finish all reflect phases before reweave "
@@ -1002,15 +1002,15 @@ def detect_pipeline_tips(phase_state: QueuePhaseState) -> list[PipelineTip]:
     return tips
 
 
-def generate_pipeline_suggestions(
-    tips: list[PipelineTip], max_suggestions: int = 4
+def generate_phase_suggestions(
+    tips: list[PhaseTip], max_suggestions: int = 4
 ) -> list[Suggestion]:
-    """Convert PipelineTip objects to Suggestion objects."""
+    """Convert PhaseTip objects to Suggestion objects for display."""
     suggestions: list[Suggestion] = []
     for tip in tips[:max_suggestions]:
         suggestions.append(
             Suggestion(
-                channel="pipeline_tip",
+                channel="phase_tip",
                 query=tip.message,
                 rationale=tip.rationale,
                 priority=tip.priority,
@@ -1085,7 +1085,7 @@ def advise(
     config: object | None = None,
     max_suggestions: int = 4,
     no_cache: bool = False,
-    include_pipeline_tips: bool = False,
+    include_phase_tips: bool = False,
     include_session_tips: bool = False,
 ) -> tuple[list[Suggestion], bool]:
     """Top-level: scan + gaps + suggestions, with caching.
@@ -1096,7 +1096,7 @@ def advise(
         config: DaemonConfig or None (loads from disk if None).
         max_suggestions: Max suggestions to return.
         no_cache: Skip cache read/write.
-        include_pipeline_tips: Include pipeline ordering tips from queue state.
+        include_phase_tips: Include phase ordering tips from queue state.
         include_session_tips: Include session-level tips from vault state.
 
     Returns:
@@ -1113,7 +1113,7 @@ def advise(
                 cached.get("session_key") == key
                 and cached.get("context") == context
                 and cached.get("max_suggestions") == max_suggestions
-                and cached.get("include_pipeline_tips", False) == include_pipeline_tips
+                and cached.get("include_phase_tips", False) == include_phase_tips
                 and cached.get("include_session_tips", False) == include_session_tips
             ):
                 return [
@@ -1135,12 +1135,12 @@ def advise(
     profiles = scan_goal_frontier(vault_path, goals_priority)
     goal_suggestions = generate_suggestions(profiles, context, max_suggestions)
 
-    # Pipeline tips channel
-    pipeline_suggestions: list[Suggestion] = []
-    if include_pipeline_tips:
+    # Phase ordering tips channel
+    phase_suggestions: list[Suggestion] = []
+    if include_phase_tips:
         phase_state = scan_queue_phases(vault_path)
-        tips = detect_pipeline_tips(phase_state)
-        pipeline_suggestions = generate_pipeline_suggestions(tips, max_suggestions)
+        tips = detect_phase_tips(phase_state)
+        phase_suggestions = generate_phase_suggestions(tips, max_suggestions)
 
     # Session tips channel
     session_suggestions: list[Suggestion] = []
@@ -1151,8 +1151,8 @@ def advise(
             session_tips, max_suggestions
         )
 
-    # Merge: session tips + pipeline tips + goal suggestions
-    suggestions = session_suggestions + pipeline_suggestions + goal_suggestions
+    # Merge: session tips + phase tips + goal suggestions
+    suggestions = session_suggestions + phase_suggestions + goal_suggestions
     suggestions = suggestions[:max_suggestions]
 
     # Write cache
@@ -1187,7 +1187,7 @@ def main(argv: list[str] | None = None) -> int:
     context = "literature"
     max_suggestions = 4
     no_cache = False
-    include_pipeline_tips = False
+    include_phase_tips = False
     include_session_tips = False
     all_tips = False
     format_human = False
@@ -1206,8 +1206,8 @@ def main(argv: list[str] | None = None) -> int:
         elif args[i] == "--no-cache":
             no_cache = True
             i += 1
-        elif args[i] == "--include-pipeline-tips":
-            include_pipeline_tips = True
+        elif args[i] == "--include-phase-tips":
+            include_phase_tips = True
             i += 1
         elif args[i] == "--include-session-tips":
             include_session_tips = True
@@ -1225,9 +1225,9 @@ def main(argv: list[str] | None = None) -> int:
         else:
             i += 1
 
-    # Auto-enable pipeline tips for ralph context
+    # Auto-enable phase tips for ralph context
     if context == "ralph":
-        include_pipeline_tips = True
+        include_phase_tips = True
 
     if not vault_path_str:
         vault_path = _default_vault_path()
@@ -1277,7 +1277,7 @@ def main(argv: list[str] | None = None) -> int:
             context=context,
             max_suggestions=max_suggestions,
             no_cache=no_cache,
-            include_pipeline_tips=include_pipeline_tips,
+            include_phase_tips=include_phase_tips,
             include_session_tips=include_session_tips,
         )
     except Exception as exc:

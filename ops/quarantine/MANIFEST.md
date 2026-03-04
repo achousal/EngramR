@@ -99,6 +99,6 @@ These notes have valid primary sources but were enriched during reflect/reweave 
 ## Recovery Path
 
 1. Get real abstracts via /literature search or stub enrichment
-2. Re-seed enriched sources through /pipeline
+2. Re-seed enriched sources with /seed then /ralph
 3. Re-extracted claims will have proper provenance
 4. Claims with correct titles/descriptions may be recoverable -- compare quarantined notes against re-extracted ones

@@ -272,26 +272,14 @@ Checks every claim in notes/ against the _templates/claim-note.md schema. Report
 ---
 
 #### /seed
-Queue a source file for processing with duplicate detection and silent auto-enrichment.
+Queue a source file for processing with duplicate detection and silent auto-enrichment. Use `--all` to queue all inbox items at once.
 
 | Property | Value |
 |----------|-------|
-| Input | Path to source file |
+| Input | Path to source file, or `--all` to queue entire inbox |
 | Output | Extract task in ops/queue/, source archived |
 
 Checks for duplicates, creates an archive folder, moves the source from inbox/ to its permanent archive location, creates an extract task file, and updates the queue. DOI stubs are silently enriched via `enrich_single_doi()` during Step 5b -- no manual enrichment step needed. The next step is /ralph to batch-process queued tasks (with fresh context per phase), or /reduce on the specific task file for single-item processing. Does not create claims directly -- all claim creation goes through /reduce.
-
----
-
-#### /pipeline
-Process inbox items through the full pipeline (reduce-reflect-reweave-verify).
-
-| Property | Value |
-|----------|-------|
-| Input | Path to inbox/ file or "all" |
-| Output | Processed claims in notes/, updated topic maps |
-
-Chains the full pipeline: seed (queue with auto-enrichment) then reduce (extract) then reflect (connect) then reweave (revisit related) then verify (quality-check). Chaining mode follows ops/config.yaml setting (manual, suggested, or automatic).
 
 ---
 

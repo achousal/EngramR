@@ -151,7 +151,6 @@ EngramR/
 | `/reflect` | Find connections between claims, update topic maps |
 | `/reweave` | Revisit old claims with new context |
 | `/verify` | Quality-check claims (description, schema, links) |
-| `/pipeline` | End-to-end source processing (reduce through verify) |
 | `/onboard` | Bootstrap lab integration -- scan, register, wire |
 | `/init` | Seed foundational knowledge claims |
 | `/next` | Surface the most valuable next action |

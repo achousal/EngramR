@@ -25,4 +25,4 @@ This is the fetched abstract text from Semantic Scholar or PubMed.
 
 ## Notes
 
-Imported from lab website. Awaiting full-text processing via /reduce or /pipeline.
+Imported from lab website. Awaiting full-text processing via /reduce or /seed.

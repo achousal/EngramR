@@ -116,17 +116,19 @@ Configured via `processing.chaining` in ops/config.yaml:
 | suggested | Skills output next step AND add to task queue (default) |
 | automatic | Skills complete, then next phase runs immediately |
 
-### Full Pipeline Invocation
+### Full Processing Invocation
 
 **Single file:**
 ```
-/pipeline inbox/source-file.md
+/seed inbox/source-file.md
 ```
+Then: /ralph 1 --batch source-file
 
 **All inbox:**
 ```
-/pipeline all
+/seed --all
 ```
+Then: /ralph N
 
 **Batch queue processing with fresh context:**
 ```
@@ -252,7 +254,7 @@ Maintenance is condition-based, not calendar-based. Conditions are evaluated by 
 |--------|-----------|--------|----------|
 | Orphan claims | Any detected | /reflect on orphans | High |
 | Dangling links | Any detected | Fix or create target claims | High |
-| Inbox pressure | Items older than 3 days | /reduce or /pipeline | Medium |
+| Inbox pressure | Items older than 3 days | /seed then /ralph | Medium |
 | Pending observations | 10+ accumulated | /rethink | Medium |
 | Pending tensions | 5+ accumulated | /rethink | Medium |
 | Topic map size | >40 claims | /refactor (split) | Low |
@@ -272,7 +274,7 @@ Conditions auto-resolve: fix the underlying problem and the maintenance task dis
 When inbox/ accumulates multiple items:
 
 ```
-/pipeline all
+/seed --all then /ralph N
 ```
 
 Or process individually with quick depth:

@@ -17,4 +17,4 @@ status: "pending"
 
 ## Notes
 
-Imported from lab website. Awaiting full-text processing via /reduce or /pipeline.
+Imported from lab website. Awaiting full-text processing via /reduce or /seed.

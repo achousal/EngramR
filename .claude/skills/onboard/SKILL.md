@@ -375,7 +375,7 @@ your first claims in four layers:
 >> /init                                          [START HERE]
    Seeds all four claim layers for your research goals.
 
-Then: Add foundational papers to inbox/ -> /pipeline -> /literature -> /ralph -> /research
+Then: Add foundational papers to inbox/ -> /seed --all -> /ralph -> /literature -> /ralph -> /research
 {if literature setup was skipped during Turn 3}: Note: run /literature --setup to configure missing API keys ({var list}).
 {if literature setup was completed during Turn 3}: (Literature search is ready.)
 === End Summary ===

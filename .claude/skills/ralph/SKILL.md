@@ -19,7 +19,7 @@ Parse arguments:
 - --batch [id]: process only tasks from specific batch
 - --type [type]: process only tasks at a specific `current_phase` (reduce, create, reflect, reweave, verify, enrich). Note: extraction tasks have `type: extract` but `current_phase: reduce` -- use `--type reduce` to select them.
 - --dry-run: show what would execute without running
-- --handoff: output structured RALPH HANDOFF block at end (for pipeline chaining)
+- --handoff: output structured RALPH HANDOFF block at end (for phase chaining)
 
 **START NOW.** Process queue tasks.
 
@@ -27,20 +27,20 @@ Parse arguments:
 
 ## Step 0: Queue Health Advisory
 
-**0a. Pipeline Ordering Tips**
+**0a. Phase Ordering Tips**
 
-Before processing, call the vault advisor for pipeline ordering tips:
+Before processing, call the vault advisor for phase ordering tips:
 
 ```bash
 VAULT_PATH="$(pwd)"
 ADVISOR=$(cd _code && uv run python -m engram_r.vault_advisor "$VAULT_PATH" \
-    --context ralph --include-pipeline-tips --max 4 2>/dev/null)
+    --context ralph --include-phase-tips --max 4 2>/dev/null)
 ADVISOR_EXIT=$?
 ```
 
-Store any pipeline tips internally for use in Step 3 (the overview merges them into the blocked/actionable summary). Do NOT display a separate Pipeline Advisory block.
+Store any phase tips internally for use in Step 3 (the overview merges them into the blocked/actionable summary). Do NOT display a separate Phase Advisory block.
 
-If the advisor fails or returns no pipeline tips, proceed silently.
+If the advisor fails or returns no phase tips, proceed silently.
 
 **0b. Abstract-Only Source Advisory**
 
@@ -130,7 +130,7 @@ tasks:
     completed_phases: [create]
 ```
 
-If the queue file does not exist or is empty, report: "Queue is empty. Use /seed or /pipeline to add sources."
+If the queue file does not exist or is empty, report: "Queue is empty. Use /seed to add sources."
 
 ## Step 2: Filter Tasks
 
@@ -678,7 +678,7 @@ Queue Updates:
 
 **All tasks blocked:** Report which tasks are blocked and why. Suggest remediation.
 
-**Empty queue:** Report "Queue is empty. Use /seed or /pipeline to add sources."
+**Empty queue:** Report "Queue is empty. Use /seed to add sources."
 
 **YAML quoting validation block (create phase):** The validate_write hook blocks notes where YAML frontmatter values contain unquoted colons (`: `). Claims with numeric values in titles (e.g. "AUC 0.94", "29 percent") are high-risk for producing descriptions like `description: AUC 0.94: strong...` where the second colon triggers the block. The subagent sees a tool failure but may retry with similar phrasing and exhaust its turn budget. **Prevention:** The create phase prompt includes a CRITICAL reminder to double-quote all YAML string values. **If still failing:** the prescriptive hook message tells the subagent exactly how to fix it (wrap in double quotes).
 

@@ -168,9 +168,9 @@ Graph health:
 - Dangling links: {count -- should be 0}
 
 Suggested next actions:
-- Add 3-5 foundational papers to inbox/ and run /pipeline (known papers build graph scaffolding)
+- Add 3-5 foundational papers to inbox/ and run /seed --all then /ralph (known papers build graph scaffolding)
 - /literature -- search for papers supporting or challenging these claims
-- /ralph -- process literature notes through the full pipeline (reduce/reflect/reweave/verify)
+- /ralph -- process literature notes through the full phase chain (reduce/reflect/reweave/verify)
 - /research -- generate and rank hypotheses building on this foundation
 === End Summary ===
 ```
