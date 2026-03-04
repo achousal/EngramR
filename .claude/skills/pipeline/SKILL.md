@@ -7,7 +7,7 @@ user-invocable: true
 context: fork
 model: sonnet
 allowed-tools: Read, Write, Edit, Grep, Glob, Bash, Agent
-argument-hint: "[file] — path to source file to process end-to-end"
+argument-hint: "[file] | --all [--no-confirm] — process one file or all inbox files"
 ---
 
 ## EXECUTE NOW
@@ -15,9 +15,13 @@ argument-hint: "[file] — path to source file to process end-to-end"
 **Target: $ARGUMENTS**
 
 Parse immediately:
-- Source file path: the file to process (required)
+- `--all`: batch mode -- process ALL files in inbox/ sequentially (see Batch Mode section)
+- `--no-confirm`: auto-skip duplicates without asking (used with `--all`; passes through to /seed)
 - `--handoff`: output RALPH HANDOFF block at end (for chaining)
-- If target is empty: list files in inbox/ and ask which to process
+- Source file path: the file to process (required unless `--all`)
+- If no target and no `--all`: list files in inbox/ and ask which to process
+
+**If `--all` is set, skip to the Batch Mode section below.**
 
 **START NOW.** Run the full pipeline.
 
