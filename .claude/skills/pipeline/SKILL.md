@@ -330,6 +330,77 @@ State lives in the queue file. The pipeline reads queue state, not session state
 
 ---
 
+## Batch Mode (`--all`)
+
+When `--all` is present, process ALL `.md` files in `inbox/` (excluding `_index.md`) sequentially, oldest first by mtime.
+
+### Batch Flow
+
+**Step 1: Discover files**
+
+```bash
+# List inbox .md files sorted by mtime (oldest first), exclude _index.md
+find inbox/ -maxdepth 1 -name "*.md" ! -name "_index.md" -print0 2>/dev/null | \
+  xargs -0 ls -t -r 2>/dev/null
+```
+
+If empty: report "inbox/ is empty -- nothing to process." and stop.
+
+**Step 2: Capture baseline metrics**
+
+Same as Phase 0 above -- capture `notes_before`.
+
+**Step 3: Seed loop**
+
+For each file (oldest first):
+1. Invoke `/seed {file}` (pass `--no-confirm` if the flag was set).
+2. If seed reports a duplicate:
+   - With `--no-confirm`: auto-skip, log "Skipped {file}: duplicate detected (--no-confirm)"
+   - Without `--no-confirm`: ask user whether to proceed or skip
+3. Capture `batch_id` from seed output into `pending_batches[]`.
+4. If seed fails for other reasons: log the error, skip this file, continue with remaining files.
+
+**Step 4: Process loop**
+
+For each `batch_id` in `pending_batches[]` sequentially:
+1. `/ralph 1 --batch {batch_id} --type extract`
+2. Count resulting claim tasks for this batch.
+3. `/ralph {N} --batch {batch_id}`
+4. If ralph fails mid-batch: log which tasks are incomplete, continue with next batch.
+
+**Step 5: Archive loop**
+
+For each completed batch: `/archive-batch {batch_id}`
+
+**Step 6: Final report**
+
+```
+--=={ pipeline --all }==--
+
+Inbox processed: {total_files} files
+  Seeded: {seeded_count}
+  Skipped (duplicate): {skip_count}
+  Failed: {fail_count}
+
+Per-batch results:
+  {batch_id}: {N} claims created
+  {batch_id}: {M} claims created
+  ...
+
+Vault health:
+  Notes created: {notes_after - notes_before}
+  TPV: {tpv} claims/day | QPR: {qpr}d backlog | IPR: {ipr}
+  Alarms: {alarm_keys or "none"}
+
+Incomplete batches: {list or "none"}
+```
+
+If metabolic indicators are unavailable, replace the "Vault health" section with `[Metabolic snapshot unavailable]`.
+
+**Backward compatibility:** Existing single-file flow (`/pipeline somefile.md`) is untouched. The batch branch only activates when `--all` is present.
+
+---
+
 ## Critical Constraints
 
 **never:**
