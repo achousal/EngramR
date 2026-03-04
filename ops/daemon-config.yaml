@@ -52,7 +52,7 @@ models:
 # Unbounded phases (source-size-dependent) get the most headroom.
 # ---------------------------------------------------------------------------
 max_turns:
-  create: 8                    # Read task file, write note
+  create: 12                   # Read task file, write note (raised from 8 for YAML retry headroom)
   verify: 8                    # Recite + validate + review
   enrich: 8                    # Read note, augment content
   reflect: 15                  # Dual discovery + MOC update

@@ -201,7 +201,9 @@ def detect_yaml_safety_issues(content: str) -> list[str]:
         if _UNQUOTED_COLON.match(stripped):
             issues.append(
                 f"Line {lineno}: unquoted value contains ':' -- "
-                f"wrap the value in double quotes. Line: {stripped}"
+                f"FIX: WRAP THE VALUE IN DOUBLE QUOTES. "
+                f"Example: description: \"your text here\". "
+                f"Line: {stripped}"
             )
         if _UNQUOTED_HASH.match(stripped):
             issues.append(

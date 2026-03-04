@@ -92,7 +92,7 @@ Each phase maps to specific Agent tool parameters. Use these EXACTLY when spawni
 | Phase | Skill Invoked | Model | max_turns | Rationale |
 |-------|---------------|-------|-----------|-----------|
 | extract | /reduce | sonnet | 25 | Large sources need many passes |
-| create | (inline note creation) | sonnet | 8 | Bounded: read task, write note |
+| create | (inline note creation) | sonnet | 12 | Bounded: read task, write note (extra headroom for YAML retry) |
 | enrich | /enrich | sonnet | 8 | Bounded: read note, augment |
 | reflect | /reflect | sonnet | 15 | Dual discovery + MOC update |
 | reweave | /reweave | sonnet | 15 | Find + update older notes |
@@ -248,6 +248,7 @@ Phase: create | Target claim: {TARGET}
 Create a claim for this claim in notes/[claim as sentence].md
 Follow note design patterns:
 - YAML frontmatter with description (adds info beyond title), topics
+- CRITICAL: ALL YAML string values MUST be wrapped in double quotes (e.g. description: "text here"). Unquoted values containing colons will be blocked by the validation hook.
 - Body: 150-400 words showing reasoning with connective words
 - Footer: Source (wiki link), Relevant Notes (with context), Topics
 Update the task file's ## Create section.
@@ -650,6 +651,8 @@ Queue Updates:
 **All tasks blocked:** Report which tasks are blocked and why. Suggest remediation.
 
 **Empty queue:** Report "Queue is empty. Use /seed or /pipeline to add sources."
+
+**YAML quoting validation block (create phase):** The validate_write hook blocks notes where YAML frontmatter values contain unquoted colons (`: `). Claims with numeric values in titles (e.g. "AUC 0.94", "29 percent") are high-risk for producing descriptions like `description: AUC 0.94: strong...` where the second colon triggers the block. The subagent sees a tool failure but may retry with similar phrasing and exhaust its turn budget. **Prevention:** The create phase prompt includes a CRITICAL reminder to double-quote all YAML string values. **If still failing:** the prescriptive hook message tells the subagent exactly how to fix it (wrap in double quotes).
 
 ---
 
