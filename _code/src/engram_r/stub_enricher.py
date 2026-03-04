@@ -272,9 +272,17 @@ def enrich_single_doi(
     email = os.environ.get("LITERATURE_ENRICHMENT_EMAIL", "")
 
     # 1. Abstract: S2 -> PubMed
-    abstract = _fetch_abstract_s2(stub.doi, timeout=timeout)
+    try:
+        abstract = _fetch_abstract_s2(stub.doi, timeout=timeout)
+    except (TimeoutError, OSError) as exc:
+        abstract = None
+        result.errors.append(f"S2 abstract fetch failed: {exc}")
     if not abstract:
-        abstract = _fetch_abstract_pubmed(stub.doi, timeout=timeout)
+        try:
+            abstract = _fetch_abstract_pubmed(stub.doi, timeout=timeout)
+        except (TimeoutError, OSError) as exc:
+            abstract = None
+            result.errors.append(f"PubMed abstract fetch failed: {exc}")
     if abstract:
         result.abstract = abstract
         result.content_depth = "abstract"

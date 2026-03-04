@@ -24,15 +24,40 @@ Read these files to configure domain-specific behavior:
 3. **`ops/queue/queue.json`** — current task queue (for handoff mode)
 
 4. **Extract task file** (if processing via pipeline/handoff) -- `ops/queue/{source-basename}.md`
-   - Read `scope` from YAML frontmatter: `full` (default) or `methods_only`
+   - Read `scope` from YAML frontmatter: `full` (default), `methods_only`, or `abstract_only`
    - `scope: methods_only` restricts extraction to `methodology-comparisons` + `design-patterns` categories only
+   - `scope: abstract_only` restricts extraction to `claims`, `evidence`, and `open-questions` only (no methods, design-patterns, or contradictions). This scope is auto-set for abstract-only sources.
    - Other categories are **scope-filtered** (not counted as skips in skip-rate denominator)
+   - Read `content_depth` from YAML frontmatter: `stub`, `abstract`, or `full_text`
 
 If these files don't exist (pre-init invocation or standalone use), use universal defaults:
 - depth: standard
 - chaining: suggested
 - selectivity: moderate
 - scope: full
+
+### Content Depth Advisory
+
+Before extraction, check `content_depth` on the source file or extract task:
+
+- **`abstract`**: Display advisory before extraction:
+  ```
+  [Content Depth Advisory] Source is abstract-only. Extraction limited to:
+  claims, evidence, open-questions. Methods and design patterns require full text.
+  ```
+  After extraction: if the source yields 3+ claims OR has high citation count (>50), recommend:
+  ```
+  [Recommendation] High-value abstract-only source. Consider obtaining full text
+  for deeper extraction (methods, contradictions, design patterns).
+  ```
+
+- **`stub`**: Display warning:
+  ```
+  [Content Depth Warning] Source is a stub (no abstract). Only title-level
+  extraction possible. Run /enrich-stubs first for meaningful extraction.
+  ```
+
+- **`full_text`** or absent: no advisory needed.
 
 ---
 

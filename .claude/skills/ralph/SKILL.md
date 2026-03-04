@@ -49,7 +49,20 @@ If the advisor fails or returns no pipeline tips, proceed silently. This enrichm
 
 **0b. Blocked Stub Check**
 
-Before processing, check for blocked stubs among reduce-phase tasks:
+Before processing, check for blocked stubs among reduce-phase tasks.
+
+**0c. Abstract-Only Source Advisory**
+
+Count reduce-phase tasks whose extract task file has `content_depth: abstract` or `scope: abstract_only`. If any exist, display:
+
+```
+[Content Depth Advisory] {N} reduce-phase task(s) are from abstract-only sources.
+Extraction will be limited to claims/evidence/questions (no methods or design patterns).
+```
+
+This is informational only -- never block processing. Continue to Step 1.
+
+**0b detail:**
 
 1. Read the queue file and count tasks where `status == "pending"` AND `current_phase == "reduce"` AND the source file is missing or is a stub (both `## Key Points` and `## Relevance` sections are empty).
 2. If blocked stubs are found, print an advisory (never block):

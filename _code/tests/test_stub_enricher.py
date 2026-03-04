@@ -431,7 +431,7 @@ class TestApplyEnrichmentToStub:
         fm_match = re_mod.match(r"^---\s*\n(.*?)\n---", text, re_mod.DOTALL)
         fm = yaml.safe_load(fm_match.group(1))
         assert fm["source_type"] == "import"
-        assert fm["journal"] == "Geroscience"
+        assert fm["journal"] == "Nature"
         assert fm["year"] == 2025
 
     def test_idempotent_second_apply(self, inbox_dir: Path):
