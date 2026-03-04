@@ -97,6 +97,22 @@ If the advisor fails or returns no suggestions (`exit 2`), proceed without them.
 
 For `/generate` recommendations, use `--context generate` instead of `--context literature`.
 
+**Pipeline tips enrichment:** When the engine recommendation involves `/ralph` or queue processing, also call the advisor with pipeline tips:
+
+```bash
+ADVISOR=$(cd _code && uv run python -m engram_r.vault_advisor "$VAULT_PATH" \
+    --context ralph --include-pipeline-tips --max 4 2>/dev/null)
+```
+
+If pipeline tips are present (channel `pipeline_tip`), show them before the recommendation:
+
+```
+  Pipeline advisory:
+    - [tip message]
+```
+
+This helps the user understand optimal phase ordering before starting queue processing.
+
 ---
 
 ### Step 1-fallback: Manual Signal Collection

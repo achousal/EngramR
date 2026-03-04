@@ -998,7 +998,7 @@ After extraction, for EACH claim, create a task file in `ops/queue/`:
 
 ```markdown
 ---
-claim: "[the claim as a sentence]"
+claim: "[the claim as a sentence -- must be filesystem-safe: replace / \\ : * ? \" < > | . + [ ] ( ) { } ^ with hyphens]"
 classification: closed | open
 source_task: [source-basename]
 semantic_neighbor: "[related note title]" | null

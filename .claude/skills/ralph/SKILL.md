@@ -27,6 +27,28 @@ Parse arguments:
 
 ## Step 0: Queue Health Advisory
 
+**0a. Pipeline Ordering Tips**
+
+Before processing, call the vault advisor for pipeline ordering tips:
+
+```bash
+VAULT_PATH="$(pwd)"
+ADVISOR=$(cd _code && uv run python -m engram_r.vault_advisor "$VAULT_PATH" \
+    --context ralph --include-pipeline-tips --max 4 2>/dev/null)
+ADVISOR_EXIT=$?
+```
+
+If `$ADVISOR_EXIT` is 0 and `$ADVISOR` contains suggestions with `channel: "pipeline_tip"`, display them as a Pipeline Advisory block:
+
+```
+[Pipeline Advisory]
+- {tip message} ({tip rationale})
+```
+
+If the advisor fails or returns no pipeline tips, proceed silently. This enrichment is advisory only -- never block processing.
+
+**0b. Blocked Stub Check**
+
 Before processing, check for blocked stubs among reduce-phase tasks:
 
 1. Read the queue file and count tasks where `status == "pending"` AND `current_phase == "reduce"` AND the source file is missing or is a stub (both `## Key Points` and `## Relevance` sections are empty).

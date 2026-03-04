@@ -427,8 +427,10 @@ def check_queue_provenance(
         # Pre-init vault or queue not yet created -- skip check.
         return ValidationResult(valid=True)
 
-    # Normalize for comparison: lowercase, strip whitespace.
-    normalized_title = claim_title.strip().lower()
+    # Normalize for comparison: apply sanitize_title to both sides so that
+    # filesystem-safe transformations (e.g. "0.94" -> "0-94") don't cause
+    # mismatches between the queue task claim field and the note filename.
+    normalized_title = sanitize_title(claim_title).strip().lower()
 
     for task_file in queue_dir.glob("*.md"):
         try:
@@ -451,7 +453,7 @@ def check_queue_provenance(
         task_claim = fm.get("claim", "")
         if (
             isinstance(task_claim, str)
-            and task_claim.strip().lower() == normalized_title
+            and sanitize_title(task_claim).strip().lower() == normalized_title
         ):
             return ValidationResult(valid=True)
 

@@ -10,14 +10,19 @@ import pytest
 from engram_r.daemon_config import DaemonConfig
 from engram_r.vault_advisor import (
     GoalProfile,
+    PipelineTip,
+    QueuePhaseState,
     Suggestion,
     advise,
     detect_gaps,
+    detect_pipeline_tips,
+    generate_pipeline_suggestions,
     generate_suggestions,
     load_cache,
     main,
     parse_goal_file,
     save_cache,
+    scan_queue_phases,
     scan_goal_frontier,
 )
 
@@ -515,3 +520,351 @@ class TestCLI:
         main([str(vault_with_goals), "--max", "2", "--no-cache"])
         data = json.loads(capsys.readouterr().out)
         assert len(data["suggestions"]) <= 2
+
+
+# ---------------------------------------------------------------------------
+# Pipeline Tip Channel -- Task file helpers
+# ---------------------------------------------------------------------------
+
+
+def _make_task_file(
+    *,
+    source_task: str,
+    classification: str = "open",
+    reduce_filled: bool = True,
+    create_filled: bool = False,
+    enrich_filled: bool = False,
+    reflect_filled: bool = False,
+    reweave_filled: bool = False,
+    verify_filled: bool = False,
+    is_enrichment: bool = False,
+) -> str:
+    """Build a per-claim task file with controlled phase fill state."""
+    fm_type = "enrichment" if is_enrichment else "claim"
+    claim_title = f"test claim from {source_task}"
+    fm = textwrap.dedent(f"""\
+        ---
+        {fm_type}: "{claim_title}"
+        classification: "{classification}"
+        source_task: {source_task}
+        ---
+
+        # {'Enrichment' if is_enrichment else 'Claim'}: {claim_title}
+
+    """)
+
+    reduce_body = (
+        f"Extracted from {source_task}. This is a test claim."
+        if reduce_filled
+        else "(to be filled by reduce phase)"
+    )
+
+    if is_enrichment:
+        enrich_body = (
+            "Enrichment applied successfully."
+            if enrich_filled
+            else "(to be filled by enrich phase)"
+        )
+        create_section = f"## Enrich\n{enrich_body}\n"
+    else:
+        create_body = (
+            "Claim created in notes/."
+            if create_filled
+            else "(to be filled by create phase)"
+        )
+        create_section = f"## Create\n{create_body}\n"
+
+    reflect_body = (
+        "Connections found."
+        if reflect_filled
+        else "(to be filled by /reflect phase)"
+    )
+    reweave_body = (
+        "Backward links added."
+        if reweave_filled
+        else "(to be filled by /reweave phase)"
+    )
+    verify_body = (
+        "Verified OK."
+        if verify_filled
+        else "(to be filled by /verify phase)"
+    )
+
+    return (
+        fm
+        + f"## Reduce Notes\n{reduce_body}\n\n---\n\n"
+        + create_section
+        + f"\n## /reflect\n{reflect_body}\n"
+        + f"\n## /reweave\n{reweave_body}\n"
+        + f"\n## /verify\n{verify_body}\n"
+    )
+
+
+# ---------------------------------------------------------------------------
+# TestScanQueuePhases
+# ---------------------------------------------------------------------------
+
+
+class TestScanQueuePhases:
+    def test_empty_queue(self, tmp_path):
+        queue_dir = tmp_path / "ops" / "queue"
+        queue_dir.mkdir(parents=True)
+        state = scan_queue_phases(tmp_path)
+        assert state.total_tasks == 0
+        assert state.sources == set()
+        assert state.phase_counts == {}
+
+    def test_no_queue_dir(self, tmp_path):
+        state = scan_queue_phases(tmp_path)
+        assert state.total_tasks == 0
+
+    def test_mixed_phases_two_sources(self, tmp_path):
+        """Source A has create-pending tasks, Source B has reflect-pending tasks."""
+        queue_dir = tmp_path / "ops" / "queue"
+        queue_dir.mkdir(parents=True)
+
+        # Source A: reduce done, create pending
+        (queue_dir / "source-a-001.md").write_text(
+            _make_task_file(
+                source_task="source-a",
+                reduce_filled=True,
+                create_filled=False,
+            )
+        )
+        (queue_dir / "source-a-002.md").write_text(
+            _make_task_file(
+                source_task="source-a",
+                reduce_filled=True,
+                create_filled=False,
+            )
+        )
+
+        # Source B: create done, reflect pending
+        (queue_dir / "source-b-001.md").write_text(
+            _make_task_file(
+                source_task="source-b",
+                reduce_filled=True,
+                create_filled=True,
+                reflect_filled=False,
+            )
+        )
+        (queue_dir / "source-b-002.md").write_text(
+            _make_task_file(
+                source_task="source-b",
+                reduce_filled=True,
+                create_filled=True,
+                reflect_filled=False,
+            )
+        )
+
+        state = scan_queue_phases(tmp_path)
+        assert state.total_tasks == 4
+        assert state.sources == {"source-a", "source-b"}
+        assert state.phase_counts.get("create", 0) == 2
+        assert state.phase_counts.get("reflect", 0) == 2
+        assert "source-a" in state.sources_with_pending_create
+        assert "source-b" in state.sources_with_pending_reflect
+
+    def test_enrichment_tasks_detected(self, tmp_path):
+        queue_dir = tmp_path / "ops" / "queue"
+        queue_dir.mkdir(parents=True)
+
+        (queue_dir / "source-c-010.md").write_text(
+            _make_task_file(
+                source_task="source-c",
+                is_enrichment=True,
+                reduce_filled=True,
+                enrich_filled=False,
+            )
+        )
+
+        state = scan_queue_phases(tmp_path)
+        assert state.total_tasks == 1
+        assert state.phase_counts.get("enrich", 0) == 1
+        assert "source-c" in state.sources_with_pending_create
+
+
+# ---------------------------------------------------------------------------
+# TestDetectPipelineTips
+# ---------------------------------------------------------------------------
+
+
+class TestDetectPipelineTips:
+    def test_reduce_before_reflect(self):
+        """2 sources, one create-pending + one reflect-pending -> tip."""
+        state = QueuePhaseState(
+            total_tasks=4,
+            sources={"source-a", "source-b"},
+            phase_counts={"create": 2, "reflect": 2},
+            sources_with_pending_create={"source-a"},
+            sources_with_pending_reflect={"source-b", "source-a"},
+        )
+        tips = detect_pipeline_tips(state)
+        tip_ids = [t.tip_id for t in tips]
+        assert "reduce_before_reflect" in tip_ids
+
+    def test_batch_reflect_ready(self):
+        """2 sources, all reflect-pending, none create-pending."""
+        state = QueuePhaseState(
+            total_tasks=4,
+            sources={"source-a", "source-b"},
+            phase_counts={"reflect": 4},
+            sources_with_pending_create=set(),
+            sources_with_pending_reflect={"source-a", "source-b"},
+        )
+        tips = detect_pipeline_tips(state)
+        tip_ids = [t.tip_id for t in tips]
+        assert "batch_reflect_ready" in tip_ids
+        assert "reduce_before_reflect" not in tip_ids
+
+    def test_reweave_after_reflect(self):
+        """Coexisting reflect and reweave pending -> tip."""
+        state = QueuePhaseState(
+            total_tasks=4,
+            sources={"source-a"},
+            phase_counts={"reflect": 2, "reweave": 2},
+            sources_with_pending_create=set(),
+            sources_with_pending_reflect={"source-a"},
+            sources_with_pending_reweave={"source-a"},
+        )
+        tips = detect_pipeline_tips(state)
+        tip_ids = [t.tip_id for t in tips]
+        assert "reweave_after_reflect" in tip_ids
+
+    def test_no_tips_single_source_reflect(self):
+        """Only 1 source with reflect-pending -> no cross-source tips."""
+        state = QueuePhaseState(
+            total_tasks=2,
+            sources={"source-a"},
+            phase_counts={"reflect": 2},
+            sources_with_pending_create=set(),
+            sources_with_pending_reflect={"source-a"},
+        )
+        tips = detect_pipeline_tips(state)
+        tip_ids = [t.tip_id for t in tips]
+        # batch_reflect_ready requires 2+ sources
+        assert "batch_reflect_ready" not in tip_ids
+        assert "reduce_before_reflect" not in tip_ids
+
+    def test_no_tips_all_complete(self):
+        """All tasks fully processed -> no tips."""
+        state = QueuePhaseState(
+            total_tasks=4,
+            sources={"source-a", "source-b"},
+            phase_counts={},
+            sources_with_pending_create=set(),
+            sources_with_pending_reflect=set(),
+        )
+        tips = detect_pipeline_tips(state)
+        assert tips == []
+
+
+# ---------------------------------------------------------------------------
+# TestPipelineTipsIntegration
+# ---------------------------------------------------------------------------
+
+
+class TestPipelineTipsIntegration:
+    def _make_vault_with_queue(self, tmp_path, create_pending=True, reflect_pending=True):
+        """Build a vault with goals and queue task files at mixed phases."""
+        # Goals (for goal_frontier channel)
+        goals_dir = tmp_path / "_research" / "goals"
+        goals_dir.mkdir(parents=True)
+        (goals_dir / "test-goal.md").write_text(_MINIMAL_GOAL)
+
+        ops = tmp_path / "ops"
+        ops.mkdir(exist_ok=True)
+        (ops / "daemon-config.yaml").write_text("goals_priority:\n  - test-goal\n")
+
+        queue_dir = ops / "queue"
+        queue_dir.mkdir(exist_ok=True)
+
+        if create_pending:
+            (queue_dir / "src-a-001.md").write_text(
+                _make_task_file(
+                    source_task="source-a",
+                    reduce_filled=True,
+                    create_filled=False,
+                )
+            )
+
+        if reflect_pending:
+            (queue_dir / "src-b-001.md").write_text(
+                _make_task_file(
+                    source_task="source-b",
+                    reduce_filled=True,
+                    create_filled=True,
+                    reflect_filled=False,
+                )
+            )
+            (queue_dir / "src-c-001.md").write_text(
+                _make_task_file(
+                    source_task="source-c",
+                    reduce_filled=True,
+                    create_filled=True,
+                    reflect_filled=False,
+                )
+            )
+
+        return tmp_path
+
+    def test_pipeline_tips_in_advise(self, tmp_path):
+        vault = self._make_vault_with_queue(tmp_path)
+        suggestions, cached = advise(
+            vault,
+            context="ralph",
+            no_cache=True,
+            include_pipeline_tips=True,
+        )
+        channels = [s.channel for s in suggestions]
+        assert "pipeline_tip" in channels
+
+    def test_pipeline_tip_priority(self, tmp_path):
+        """Pipeline tips sort before goal suggestions (priority 0 < goal rank*10)."""
+        vault = self._make_vault_with_queue(tmp_path)
+        suggestions, _ = advise(
+            vault,
+            context="ralph",
+            no_cache=True,
+            include_pipeline_tips=True,
+            max_suggestions=10,
+        )
+        pipeline = [s for s in suggestions if s.channel == "pipeline_tip"]
+        goal = [s for s in suggestions if s.channel == "goal_frontier"]
+        if pipeline and goal:
+            assert max(s.priority for s in pipeline) <= min(
+                s.priority for s in goal
+            )
+
+    def test_no_pipeline_tips_without_flag(self, tmp_path):
+        vault = self._make_vault_with_queue(tmp_path)
+        suggestions, _ = advise(
+            vault,
+            context="literature",
+            no_cache=True,
+            include_pipeline_tips=False,
+        )
+        channels = [s.channel for s in suggestions]
+        assert "pipeline_tip" not in channels
+
+    def test_cli_ralph_context(self, tmp_path, capsys):
+        """--context ralph auto-enables pipeline tips."""
+        vault = self._make_vault_with_queue(tmp_path)
+        exit_code = main([str(vault), "--context", "ralph", "--no-cache"])
+        captured = capsys.readouterr()
+        data = json.loads(captured.out)
+        channels = [s["channel"] for s in data["suggestions"]]
+        assert "pipeline_tip" in channels
+
+    def test_cli_explicit_pipeline_tips_flag(self, tmp_path, capsys):
+        """--include-pipeline-tips flag works with any context."""
+        vault = self._make_vault_with_queue(tmp_path)
+        main([
+            str(vault),
+            "--context", "literature",
+            "--include-pipeline-tips",
+            "--no-cache",
+        ])
+        data = json.loads(capsys.readouterr().out)
+        channels = [s["channel"] for s in data["suggestions"]]
+        assert "pipeline_tip" in channels

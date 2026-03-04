@@ -9,6 +9,7 @@ import pytest
 from engram_r.schema_validator import (
     ValidationResult,
     check_notes_provenance,
+    check_queue_provenance,
     detect_unicode_issues,
     detect_yaml_safety_issues,
     normalize_text,
@@ -1085,3 +1086,78 @@ class TestClaimFamilySchemas:
         content = _note(["type: question"])
         result = validate_note(content)
         assert not result.valid
+
+
+# ---------------------------------------------------------------------------
+# check_queue_provenance
+# ---------------------------------------------------------------------------
+
+
+class TestCheckQueueProvenance:
+    """Tests for queue provenance validation."""
+
+    def test_no_queue_dir_passes(self, tmp_path):
+        result = check_queue_provenance("some claim", tmp_path / "nonexistent")
+        assert result.valid
+
+    def test_exact_match_passes(self, tmp_path):
+        queue_dir = tmp_path / "queue"
+        queue_dir.mkdir()
+        task = queue_dir / "source-001.md"
+        task.write_text(
+            '---\nclaim: "plasma p-tau217 is elevated"\n---\n',
+            encoding="utf-8",
+        )
+        result = check_queue_provenance("plasma p-tau217 is elevated", queue_dir)
+        assert result.valid
+
+    def test_no_match_fails(self, tmp_path):
+        queue_dir = tmp_path / "queue"
+        queue_dir.mkdir()
+        task = queue_dir / "source-001.md"
+        task.write_text(
+            '---\nclaim: "some other claim"\n---\n',
+            encoding="utf-8",
+        )
+        result = check_queue_provenance("unrelated claim title", queue_dir)
+        assert not result.valid
+
+    def test_decimal_period_sanitization_matches(self, tmp_path):
+        """Regression: claim with '0.94' in queue must match filename with '0-94'."""
+        queue_dir = tmp_path / "queue"
+        queue_dir.mkdir()
+        task = queue_dir / "source-157.md"
+        task.write_text(
+            '---\nclaim: "p-tau217 achieves AUC 0.94 for detecting amyloid"\n---\n',
+            encoding="utf-8",
+        )
+        # Filename stem will have period replaced with hyphen
+        result = check_queue_provenance(
+            "p-tau217 achieves AUC 0-94 for detecting amyloid", queue_dir
+        )
+        assert result.valid
+
+    def test_slash_sanitization_matches(self, tmp_path):
+        """Claim with '/' in queue must match filename with '-'."""
+        queue_dir = tmp_path / "queue"
+        queue_dir.mkdir()
+        task = queue_dir / "source-002.md"
+        task.write_text(
+            '---\nclaim: "APP/PS1 mice show elevated tau"\n---\n',
+            encoding="utf-8",
+        )
+        result = check_queue_provenance(
+            "APP-PS1 mice show elevated tau", queue_dir
+        )
+        assert result.valid
+
+    def test_case_insensitive(self, tmp_path):
+        queue_dir = tmp_path / "queue"
+        queue_dir.mkdir()
+        task = queue_dir / "source-003.md"
+        task.write_text(
+            '---\nclaim: "APOE Genotype Modifies"\n---\n',
+            encoding="utf-8",
+        )
+        result = check_queue_provenance("apoe genotype modifies", queue_dir)
+        assert result.valid
