@@ -279,7 +279,7 @@ Queue a source file for processing with duplicate detection.
 | Input | Path to source file |
 | Output | Extract task in ops/queue/, source archived |
 
-Checks for duplicates, creates an archive folder, moves the source from inbox/ to its permanent archive location, creates an extract task file, and updates the queue. The next step is /ralph or /reduce to process the queued task. Does not create claims directly -- all claim creation goes through /reduce.
+Checks for duplicates, creates an archive folder, moves the source from inbox/ to its permanent archive location, creates an extract task file, and updates the queue. The next step is /ralph to batch-process queued tasks (with fresh context per phase), or /reduce on the specific task file for single-item processing. Does not create claims directly -- all claim creation goes through /reduce.
 
 ---
 

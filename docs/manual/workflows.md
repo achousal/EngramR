@@ -128,12 +128,13 @@ Configured via `processing.chaining` in ops/config.yaml:
 /pipeline all
 ```
 
-**Deep processing with fresh context:**
+**Batch queue processing with fresh context:**
 ```
-/ralph inbox/important-paper.md
+/seed inbox/important-paper.md   # creates extract task in queue
+/ralph 1                          # processes queued task with isolated context per phase
 ```
 
-/ralph invokes each phase in a separate context window, maximizing quality for important sources.
+/ralph processes tasks already in the queue, not inbox files directly. /seed must run first.
 
 ---
 

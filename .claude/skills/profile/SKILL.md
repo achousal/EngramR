@@ -1,7 +1,7 @@
 ---
 name: profile
 description: "Create, list, show, and activate domain profiles. Conversational interview generates a complete profile directory for any research domain. Triggers on /profile, /profile --list, /profile --show {name}, /profile --activate {name}."
-version: "1.0"
+version: "1.1"
 generated_from: "arscontexta-v1.6"
 user-invocable: true
 context: main
@@ -15,6 +15,7 @@ allowed-tools:
   - Bash
   - WebSearch
   - Agent
+  - AskUserQuestion
 argument-hint: "[--list | --show {name} | --activate {name}]"
 ---
 
@@ -36,14 +37,54 @@ Detailed schemas and prompts live in `reference/` files that sub-skill agents Re
 
 ## Phase 0: MODE ROUTING
 
+### Step 0: Detect active profile
+
+Before routing, check if a profile is already active:
+```bash
+cd /Users/andreschousal/EngramR && uv run --directory _code python -c "
+import sys; sys.path.insert(0, 'src')
+from engram_r.domain_profile import get_active_profile
+p = get_active_profile('../ops/config.yaml')
+if p:
+    print(f'ACTIVE:{p.name}:{p.description}')
+else:
+    print('NONE')
+"
+```
+
+Store the result as `active_profile_name` (or None).
+
 ### Parse arguments
 
 | Input | Mode |
 |-------|------|
-| (empty) | Start 6-turn interview |
+| (empty) | Active-profile gate (see below), then interview |
 | `--list` | List available profiles |
 | `--show {name}` | Display profile summary |
-| `--activate {name}` | Apply profile to ops/config.yaml + merge palettes |
+| `--activate {name}` | Activate with switch/reload detection |
+
+---
+
+### Mode: (empty) -- Active-profile gate
+
+If `active_profile_name` is not None:
+
+Present to user:
+```
+Profile '{active_profile_name}' is currently active.
+
+What would you like to do?
+1. Create a new profile (starts the interview)
+2. Show the current profile (/profile --show {active_profile_name})
+3. List all available profiles (/profile --list)
+```
+
+Use AskUserQuestion with these three options. Route accordingly:
+- Option 1: proceed to Phase 1 (interview)
+- Option 2: execute --show mode with active_profile_name
+- Option 3: execute --list mode
+
+If `active_profile_name` is None: proceed directly to Phase 1 (interview).
 
 ---
 
@@ -89,7 +130,16 @@ print(f'Found: {p.name} -- {p.description}')
 "
 ```
 
-2. On success, apply:
+2. **Edge case: already active.** If `active_profile_name == {name}`:
+   - Tell user: "Profile '{name}' is already active."
+   - Ask: "Reload it? This re-applies config overrides and palette merges. (yes/no)"
+   - If no: done. If yes: proceed to step 3.
+
+3. **Edge case: switching profiles.** If `active_profile_name` is not None and `active_profile_name != {name}`:
+   - Tell user: "Switching from '{active_profile_name}' to '{name}'."
+   - Proceed to step 4 (no blocking confirmation -- switching is normal).
+
+4. Apply:
 ```bash
 cd /Users/andreschousal/EngramR && uv run --directory _code python -c "
 import sys; sys.path.insert(0, 'src')
@@ -103,7 +153,7 @@ print(f'  domain.profile = {p.profile_dir}')
 "
 ```
 
-3. Present confirmation. Done.
+5. Present confirmation. Done.
 
 ---
 
@@ -158,7 +208,11 @@ profiles = discover_profiles()
 print(','.join(profiles) if profiles else 'NONE')
 "
 ```
-3. If collision, ask for a different name
+3. If collision:
+   - If colliding name == active_profile_name: ask "A profile named '{name}' already exists and is currently active. Overwrite it, or choose a different name?"
+   - If colliding name != active_profile_name: ask "A profile named '{name}' already exists. Overwrite it, or choose a different name?"
+   - On "overwrite": proceed (existing profile directory will be overwritten in Phase 2)
+   - On "different name": ask for a new name and re-validate
 4. Store: profile_name, profile_description, agent_purpose, focus_areas
 
 ---

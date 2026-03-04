@@ -190,7 +190,7 @@ def classify_signals(state: VaultState, config: DaemonConfig) -> list[Signal]:
 
     if state.inbox_count > 5:
         _inbox_action = (
-            f"/ralph {state.inbox_count}"
+            "/pipeline all"
             if state.inbox_count > 1
             else "/reduce"
         )
