@@ -13,7 +13,7 @@ allowed-tools:
   - Bash
   - Edit
   - Write
-argument-hint: "[query] | --setup | --goal [slug]"
+argument-hint: "[query] | --setup | --goal [slug] | --methods-only"
 ---
 
 ## Runtime Configuration (Step 0 -- before any processing)
@@ -50,6 +50,7 @@ Parse immediately:
 - If `$ARGUMENTS` contains `--setup` -> run setup flow, stop (unless query also present)
 - If `$ARGUMENTS` contains `--goal [slug]` -> scope search to that research goal's domain
 - If `$ARGUMENTS` contains `--handoff` -> emit CO-SCIENTIST HANDOFF block at end
+- If `$ARGUMENTS` contains `--methods-only` -> pass `scope="methods_only"` to `create_queue_entries()` in pipeline chaining step. Use for cross-domain papers where only methodology is relevant.
 - Remaining text in `$ARGUMENTS` -> search query
 - If no query and no `--setup` -> read vault context for suggestions, then present query options
 
@@ -251,6 +252,7 @@ entries = create_queue_entries(
     created_notes=created,
     queue_path='../ops/queue/queue.json',
     vault_root='..',
+    scope='{methods_only if --methods-only flag set, otherwise full}',
 )
 print(json.dumps(entries, indent=2))
 "
@@ -273,6 +275,7 @@ entries = create_queue_entries(
     created_notes=created,
     queue_path='../ops/queue/queue.json',
     vault_root='..',
+    scope='{methods_only if --methods-only flag set, otherwise full}',
 )
 print(json.dumps({'notes': created, 'queue_entries': entries}, indent=2))
 "

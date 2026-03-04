@@ -22,6 +22,7 @@ from engram_r.vault_advisor import (
     main,
     parse_goal_file,
     save_cache,
+    scan_extract_scopes,
     scan_queue_phases,
     scan_goal_frontier,
 )
@@ -868,3 +869,141 @@ class TestPipelineTipsIntegration:
         data = json.loads(capsys.readouterr().out)
         channels = [s["channel"] for s in data["suggestions"]]
         assert "pipeline_tip" in channels
+
+
+# ---------------------------------------------------------------------------
+# Scope field tests
+# ---------------------------------------------------------------------------
+
+
+class TestScanExtractScopes:
+    """Tests for scan_extract_scopes()."""
+
+    def test_empty_queue(self, tmp_path: Path):
+        queue_dir = tmp_path / "ops" / "queue"
+        queue_dir.mkdir(parents=True)
+        assert scan_extract_scopes(tmp_path) == {}
+
+    def test_no_dir(self, tmp_path: Path):
+        assert scan_extract_scopes(tmp_path) == {}
+
+    def test_extract_with_scope(self, tmp_path: Path):
+        queue_dir = tmp_path / "ops" / "queue"
+        queue_dir.mkdir(parents=True)
+        (queue_dir / "paper-a.md").write_text(textwrap.dedent("""\
+            ---
+            id: "paper-a"
+            type: extract
+            scope: "methods_only"
+            ---
+            # Extract claims
+        """))
+        result = scan_extract_scopes(tmp_path)
+        assert result == {"paper-a": "methods_only"}
+
+    def test_default_scope(self, tmp_path: Path):
+        queue_dir = tmp_path / "ops" / "queue"
+        queue_dir.mkdir(parents=True)
+        (queue_dir / "paper-b.md").write_text(textwrap.dedent("""\
+            ---
+            id: "paper-b"
+            type: extract
+            ---
+            # Extract claims
+        """))
+        result = scan_extract_scopes(tmp_path)
+        assert result == {"paper-b": "full"}
+
+    def test_ignores_non_extract(self, tmp_path: Path):
+        queue_dir = tmp_path / "ops" / "queue"
+        queue_dir.mkdir(parents=True)
+        (queue_dir / "claim-001.md").write_text(textwrap.dedent("""\
+            ---
+            id: "claim-001"
+            type: claim
+            source_task: "paper-a"
+            ---
+            # Claim
+        """))
+        result = scan_extract_scopes(tmp_path)
+        assert result == {}
+
+    def test_invalid_scope(self, tmp_path: Path):
+        queue_dir = tmp_path / "ops" / "queue"
+        queue_dir.mkdir(parents=True)
+        (queue_dir / "paper-c.md").write_text(textwrap.dedent("""\
+            ---
+            id: "paper-c"
+            type: extract
+            scope: "bogus_value"
+            ---
+            # Extract
+        """))
+        result = scan_extract_scopes(tmp_path)
+        assert result == {}
+
+    def test_id_fallback_to_stem(self, tmp_path: Path):
+        queue_dir = tmp_path / "ops" / "queue"
+        queue_dir.mkdir(parents=True)
+        (queue_dir / "paper-d.md").write_text(textwrap.dedent("""\
+            ---
+            type: extract
+            scope: "full"
+            ---
+            # Extract
+        """))
+        result = scan_extract_scopes(tmp_path)
+        assert result == {"paper-d": "full"}
+
+
+class TestSuggestionScope:
+    """Tests for scope field on Suggestion dataclass."""
+
+    def test_default_scope(self):
+        s = Suggestion(
+            channel="test", query="q", rationale="r",
+            priority=1, goal_ref="g",
+        )
+        assert s.scope == "full"
+
+    def test_explicit_scope(self):
+        s = Suggestion(
+            channel="test", query="q", rationale="r",
+            priority=1, goal_ref="g", scope="methods_only",
+        )
+        assert s.scope == "methods_only"
+
+    def test_cache_roundtrip_with_scope(self, tmp_path: Path):
+        cache_path = tmp_path / "cache.json"
+        suggestions = [
+            Suggestion(
+                channel="c", query="q", rationale="r",
+                priority=1, goal_ref="g", scope="methods_only",
+            ),
+        ]
+        save_cache(cache_path, suggestions, "key", "reduce", 5)
+        data = json.loads(cache_path.read_text())
+        assert data["suggestions"][0]["scope"] == "methods_only"
+
+    def test_backward_compat_old_cache_without_scope(self, tmp_path: Path):
+        """Old cache files without scope should still load; scope defaults."""
+        cache_path = tmp_path / "cache.json"
+        data = {
+            "session_key": "k",
+            "context": "reduce",
+            "max_suggestions": 5,
+            "suggestions": [
+                {
+                    "channel": "c",
+                    "query": "q",
+                    "rationale": "r",
+                    "priority": 1,
+                    "goal_ref": "g",
+                },
+            ],
+        }
+        cache_path.write_text(json.dumps(data))
+        loaded = load_cache(cache_path)
+        assert loaded is not None
+        # Old caches lack scope key -- callers must handle default
+        assert "scope" not in loaded["suggestions"][0]

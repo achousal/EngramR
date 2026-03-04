@@ -7,7 +7,7 @@ user-invocable: true
 context: fork
 model: sonnet
 allowed-tools: Read, Write, Edit, Grep, Glob, Bash
-argument-hint: "[file] [--no-confirm] — path to source file to seed for processing"
+argument-hint: "[file] [--no-confirm] [--methods-only] — path to source file to seed for processing"
 ---
 
 ## EXECUTE NOW
@@ -17,6 +17,7 @@ argument-hint: "[file] [--no-confirm] — path to source file to seed for proces
 Parse arguments:
 - File path (required unless listing): the source file to seed
 - `--no-confirm`: skip interactive duplicate-confirmation prompt. If a duplicate is detected, auto-skip and log "Skipped {file}: duplicate detected (--no-confirm)". All other seed operations proceed normally. Used by daemon P2.5 and `/pipeline --all`.
+- `--methods-only`: restrict downstream extraction to methodology-comparisons and design-patterns only. Sets `scope: "methods_only"` on the extract task and queue entry. Use for cross-domain papers that are methodologically relevant but not disease-specific.
 
 The target MUST be a file path. If no target provided, list inbox/ contents and ask which to seed.
 
@@ -154,6 +155,7 @@ original_path: "{original file path before move}"
 archive_folder: "{ARCHIVE_DIR}"
 created: "{UTC timestamp}"
 next_claim_start: {NEXT_CLAIM_START}
+scope: "{full | methods_only — default full, set methods_only if --methods-only flag}"
 ---
 
 # Extract claims from {source filename}
@@ -165,7 +167,7 @@ Size: {line count} lines
 Content type: {detected type}
 
 ## Scope
-{scope guidance if provided via --scope, otherwise: "Full document"}
+{If --methods-only: "Methods only -- extract methodology-comparisons and design-patterns only" | Otherwise: "Full document"}
 
 ## Acceptance Criteria
 - Extract claims, implementation ideas, tensions, and testable hypotheses
@@ -204,7 +206,8 @@ Add the extract task entry to the queue file.
   "source": "{FINAL_SOURCE}",
   "file": "{SOURCE_BASENAME}.md",
   "created": "{UTC timestamp}",
-  "next_claim_start": {NEXT_CLAIM_START}
+  "next_claim_start": {NEXT_CLAIM_START},
+  "scope": "{full | methods_only — matches task file scope}"
 }
 ```
 

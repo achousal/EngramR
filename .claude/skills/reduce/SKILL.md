@@ -23,10 +23,16 @@ Read these files to configure domain-specific behavior:
 
 3. **`ops/queue/queue.json`** — current task queue (for handoff mode)
 
+4. **Extract task file** (if processing via pipeline/handoff) -- `ops/queue/{source-basename}.md`
+   - Read `scope` from YAML frontmatter: `full` (default) or `methods_only`
+   - `scope: methods_only` restricts extraction to `methodology-comparisons` + `design-patterns` categories only
+   - Other categories are **scope-filtered** (not counted as skips in skip-rate denominator)
+
 If these files don't exist (pre-init invocation or standalone use), use universal defaults:
 - depth: standard
 - chaining: suggested
 - selectivity: moderate
+- scope: full
 
 ---
 
@@ -201,6 +207,22 @@ When the source file has `type: hypothesis` in its YAML frontmatter (files in `_
 | Off-topic general content | Insight unrelated to the domain | apply selectivity gate | YES |
 
 **IMPORTANT:** Categories 1-9 bypass the selectivity gate. They extract directly to the appropriate output type. The selectivity gate exists ONLY for filtering off-topic content from general sources.
+
+### Scope-Based Category Restriction
+
+When the extract task file specifies `scope: methods_only`, apply these rules:
+
+| Category | Allowed? | Rationale |
+|----------|----------|-----------|
+| Comparisons (methodology-comparisons) | YES | Cross-domain method insights |
+| Implementation ideas (design-patterns) | YES | Reusable techniques |
+| All other categories | SCOPE-FILTERED | Not skipped -- excluded from extraction |
+
+**Scope-filtered candidates do NOT count in the skip-rate denominator.** Skip rate < 10% applies within allowed categories only. This prevents false skip-rate violations when most content is disease-specific.
+
+**Calibration:** Methods papers typically yield 3-8 methodology claims. Zero methodology claims from a methods paper with `scope: methods_only` is still a BUG -- it means you missed the methods.
+
+**How to read scope:** Check `ops/queue/{source-basename}.md` frontmatter for `scope:` field. If absent, default to `full` (no restriction).
 
 ### Category Detection Signals
 

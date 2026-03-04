@@ -820,6 +820,7 @@ def create_queue_entries(
     created_notes: list[dict],
     queue_path: str | Path,
     vault_root: str | Path | None = None,
+    scope: str = "full",
 ) -> list[dict]:
     """Append deduplicated extract queue entries for newly created literature notes.
 
@@ -889,6 +890,7 @@ def create_queue_entries(
             "created": now,
             "current_phase": "reduce",
             "completed_phases": [],
+            "scope": scope,
         }
 
         queue.append(entry)

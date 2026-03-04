@@ -1624,3 +1624,27 @@ class TestCreateQueueEntries:
         queue = json.loads(queue_path.read_text())
         assert len(queue) == 1
         assert queue[0]["id"] == "extract-a"
+
+
+class TestCreateQueueEntriesScope:
+    """Tests for scope parameter in create_queue_entries."""
+
+    def test_queue_entry_includes_scope(self, tmp_path: Path):
+        queue_path = tmp_path / "queue.json"
+        notes = [
+            {"path": "/vault/lit/a.md", "status": "created", "doi": "10.1/a"},
+        ]
+        entries = create_queue_entries(
+            notes, queue_path, vault_root="/vault", scope="methods_only",
+        )
+        assert len(entries) == 1
+        assert entries[0]["scope"] == "methods_only"
+
+    def test_queue_entry_default_scope(self, tmp_path: Path):
+        queue_path = tmp_path / "queue.json"
+        notes = [
+            {"path": "/vault/lit/b.md", "status": "created", "doi": "10.1/b"},
+        ]
+        entries = create_queue_entries(notes, queue_path, vault_root="/vault")
+        assert len(entries) == 1
+        assert entries[0]["scope"] == "full"

@@ -74,6 +74,7 @@ class Suggestion:
     rationale: str
     priority: int
     goal_ref: str
+    scope: str = "full"
 
 
 @dataclass
@@ -452,6 +453,51 @@ def scan_queue_phases(vault_path: Path) -> QueuePhaseState:
     return state
 
 
+_VALID_SCOPES = frozenset({"full", "methods_only"})
+
+
+def scan_extract_scopes(vault_path: Path) -> dict[str, str]:
+    """Scan ops/queue/*.md for extract-type tasks and return {task_id: scope}.
+
+    Reads frontmatter from each .md file in the queue directory.  Only files
+    with ``type: extract`` are considered.  The ``scope`` field defaults to
+    ``"full"`` when absent.  Invalid scope values are silently ignored (the
+    task is omitted from the result).
+    """
+    queue_dir = vault_path / "ops" / "queue"
+    if not queue_dir.is_dir():
+        return {}
+
+    result: dict[str, str] = {}
+    for md_file in queue_dir.glob("*.md"):
+        try:
+            text = md_file.read_text(errors="replace")
+        except OSError:
+            continue
+
+        fm_match = _FM_RE.match(text)
+        if not fm_match:
+            continue
+        try:
+            fm = yaml.safe_load(fm_match.group(1))
+            if not isinstance(fm, dict):
+                continue
+        except yaml.YAMLError:
+            continue
+
+        if fm.get("type") != "extract":
+            continue
+
+        task_id = fm.get("id", md_file.stem)
+        scope = fm.get("scope", "full")
+        if scope not in _VALID_SCOPES:
+            continue
+
+        result[task_id] = scope
+
+    return result
+
+
 def detect_pipeline_tips(phase_state: QueuePhaseState) -> list[PipelineTip]:
     """Detect pipeline ordering opportunities from queue phase state.
 
@@ -594,6 +640,7 @@ def save_cache(
                 "rationale": s.rationale,
                 "priority": s.priority,
                 "goal_ref": s.goal_ref,
+                "scope": s.scope,
             }
             for s in suggestions
         ],
@@ -765,6 +812,7 @@ def main(argv: list[str] | None = None) -> int:
                 "rationale": s.rationale,
                 "priority": s.priority,
                 "goal_ref": s.goal_ref,
+                "scope": s.scope,
             }
             for s in suggestions
         ],
