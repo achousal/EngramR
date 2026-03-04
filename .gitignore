@@ -71,6 +71,7 @@ inbox/
 self/goals.md
 
 # Operational runtime state
+ops/advisor-cache.json
 ops/daemon-inbox.md
 ops/tasks.md
 ops/next-log.md
