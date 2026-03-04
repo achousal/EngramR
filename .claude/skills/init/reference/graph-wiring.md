@@ -44,6 +44,13 @@ Consider running /init again with additional goals, or use /seed + /reduce to ad
 
 ### 5b. Topic Map Updates
 
+#### Collision Guard
+
+Before creating or updating a topic map:
+1. Verify topic map name does not match any goal slug in _research/goals/
+   `ls _research/goals/{topic-map-name}.md 2>/dev/null`
+2. If collision: ERROR -- goal names must be specific and actionable; topic maps must be broad domain labels. Rename the goal before proceeding.
+
 For each topic map referenced in the created claims:
 
 1. Check if the topic map exists: `ls "notes/{topic-map-name}.md" 2>/dev/null`

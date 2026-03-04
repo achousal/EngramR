@@ -89,6 +89,9 @@ Add each claim to the PENDING_CLAIMS list. Do NOT write to disk.
 
 ### Total: {count}
 
+### Topic Map Mapping
+{For each goal: goal-slug -> TOPIC_MAP_NAME}
+
 ### Topic Maps Referenced
 {list of topic map names referenced in Topics: footers}
 
