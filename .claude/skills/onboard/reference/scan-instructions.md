@@ -30,22 +30,40 @@ Skip directories that are clearly not projects: `.git`, `__pycache__`, `node_mod
 
 ### 2b. Extract project metadata
 
-For each candidate project, collect:
+**Batch-detect boolean fields first.** Run these commands ONCE across all candidate projects to avoid per-project detection errors:
+
+```bash
+# Batch detect CLAUDE.md, .git, and tests for all candidate projects
+for d in {lab_path}/*/; do
+  tag=$(basename "$d" | tr '[:upper:]_ ' '[:lower:]--')
+  claude_md="false"; git_dir="false"; tests_dir="false"
+  [ -f "$d/CLAUDE.md" ] && claude_md="true"
+  [ -d "$d/.git" ] && git_dir="true"
+  [ -d "$d/tests" ] || [ -d "$d/analysis/tests" ] && tests_dir="true"
+  echo "$tag|$claude_md|$git_dir|$tests_dir"
+done
+```
+
+Parse this output and use it as the authoritative source for `has_claude_md`, `has_git`, and `has_tests`. Do NOT re-check these individually per project -- the batch result is canonical.
+
+Then for each candidate project, collect:
 
 | Field | Detection Method |
 |-------|-----------------|
 | name | Directory basename |
 | project_tag | Lowercase, hyphens for spaces/underscores |
 | languages | File extensions: .R -> R, .py -> Python, .sh -> Bash, .nf -> Nextflow |
-| has_claude_md | Test `{path}/CLAUDE.md` exists |
-| has_git | Test `{path}/.git/` exists |
-| has_tests | Test `{path}/tests/` or `{path}/analysis/tests/` exists |
+| has_claude_md | From batch detection above |
+| has_git | From batch detection above |
+| has_tests | From batch detection above |
 | data_files | `ls {path}/data/ 2>/dev/null | head -10` (sample, not exhaustive) |
 | hpc_indicators | Presence of .lsf/.slurm/.pbs files, or HPC paths in CLAUDE.md |
 
 ### 2c. Read CLAUDE.md for auto-population
 
-If `CLAUDE.md` exists in a project, read it (first 100 lines) and extract:
+For EVERY project where `has_claude_md` is `true` (from Step 2b batch detection), read the CLAUDE.md and extract metadata. Do not skip any -- this is the primary source of project descriptions.
+
+For each such project, read first 100 lines of `{path}/CLAUDE.md` and extract:
 - **Description**: first paragraph or "## Overview" section
 - **Language**: from documented tech stack or dependencies
 - **HPC path**: any HPC/cluster paths mentioned
@@ -53,6 +71,26 @@ If `CLAUDE.md` exists in a project, read it (first 100 lines) and extract:
 - **Key data files**: from "## Data" or similar section
 
 Do NOT read CLAUDE.md files that are excessively large (>500 lines). Read first 100 lines only.
+
+**Reliability rule:** If there are more than 5 projects with CLAUDE.md, batch-read them using a loop rather than individual Read calls to prevent skipping:
+
+```bash
+for d in {lab_path}/*/; do
+  [ -f "$d/CLAUDE.md" ] && echo "=== $(basename "$d") ===" && head -100 "$d/CLAUDE.md"
+done
+```
+
+Parse the output to extract description and metadata for each project.
+
+### 2c2. Description fallback chain
+
+Every project MUST have a non-empty description in scan output. If Step 2c did not produce a description (no CLAUDE.md, or no overview section found), attempt these sources in order:
+
+1. **README.md** -- read first 50 lines. Extract first paragraph or "## Overview" / "## About" section. Condense to one sentence.
+2. **Synthesize from scan metadata** -- combine detected fields into a one-liner: `"{Research domain} project using {languages} on {data layers}"`. Example: `"Proteomic risk prediction using Python and R on SomaScan proteomics data"`.
+3. **Flag for review** -- if neither source yields a description, set description to `"(needs description)"` so it appears prominently in the Review table (Turn 2) for user correction.
+
+The description must appear in the scan output alongside each project row. The Review table (Turn 2) uses the "Research Q" column -- populate it from the description so the user sees and can correct it.
 
 ### 2d. Mine conventions from code
 

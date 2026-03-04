@@ -62,13 +62,20 @@ If a goal already exists that matches what the user described, link the new proj
 
 ## 5a. Project Notes
 
-For each NEW project, build a project note. Follow the exact schema from `_code/templates/project.md`:
+For each NEW project, build a project note. Follow the exact schema from `_code/templates/project.md`.
+
+**Description is mandatory.** Every project note MUST have a non-empty description. Apply this resolution order:
+
+1. Use the description from scan data (extracted from CLAUDE.md or README.md in Step 2c/2c2).
+2. If scan description is empty or `"(needs description)"`, use user corrections from the Review phase.
+3. If still empty, synthesize from available scan metadata: `"{Research domain} {status} project using {languages}"`. Example: `"Active proteomic risk prediction project using Python and R"`.
+4. Never write `description: ""` -- this is a generation bug.
 
 ```yaml
 ---
 type: project
 title: "{detected or user-provided title}"
-description: "{one-line description from CLAUDE.md or user correction}"
+description: "{from resolution order above -- never empty}"
 project_tag: "{tag}"
 lab: "{lab name}"
 pi: "{PI}"
@@ -88,7 +95,7 @@ updated: {today YYYY-MM-DD}
 tags: [project, {lab_slug}]
 ---
 
-{One-line description from CLAUDE.md or user correction}
+{Same description as frontmatter -- never empty}
 
 ![[_dev/{tag}/CLAUDE.md]]
 
