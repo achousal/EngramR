@@ -175,13 +175,14 @@ Research complete
 
   Filed to: inbox/[filename]
 
-  Next: /reduce inbox/[filename]
+  Next: /ralph 1 --batch [filename]  -- process through full pipeline (reduce -> reflect -> reweave -> verify)
+    Or: /reduce inbox/[filename]     -- process this single file manually
 ```
 
 Append based on mode:
 - **manual:** (nothing extra)
 - **suggested:** `Ready for processing when you are.`
-- **automatic:** Replace "Next" line with `Queued for /reduce -- processing will begin automatically.`
+- **automatic:** Replace "Next" line with `Queued for /ralph -- processing will begin automatically.`
 
 ---
 
