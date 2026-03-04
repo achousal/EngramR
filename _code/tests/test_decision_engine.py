@@ -192,7 +192,9 @@ class TestClassifySignals:
 
     def test_metabolic_cmr_signal(self, clean_state, default_config):
         """CMR alarm generates session-priority signal."""
-        clean_state.metabolic = MetabolicState(cmr=15.0, alarm_keys=["cmr_hot"])
+        clean_state.metabolic = MetabolicState(
+            cmr=15.0, maintenance_count=1, alarm_keys=["cmr_hot"]
+        )
         signals = classify_signals(clean_state, default_config)
         cmr = [s for s in signals if s.name == "metabolic_cmr"]
         assert len(cmr) == 1
@@ -234,6 +236,46 @@ class TestClassifySignals:
         signals = classify_signals(clean_state, default_config)
         metabolic = [s for s in signals if s.name.startswith("metabolic_")]
         assert metabolic == []
+
+    def test_metabolic_cmr_bootstrap_redirects_to_ralph(
+        self, clean_state, default_config
+    ):
+        """CMR hot + maintenance_count=0 + queue_backlog>0 -> /ralph."""
+        clean_state.metabolic = MetabolicState(
+            cmr=15.0, maintenance_count=0, alarm_keys=["cmr_hot"]
+        )
+        clean_state.queue_backlog = 10
+        signals = classify_signals(clean_state, default_config)
+        cmr = [s for s in signals if s.name == "metabolic_cmr"]
+        assert len(cmr) == 1
+        assert "/ralph" in cmr[0].action
+        assert "Bootstrap" in cmr[0].rationale
+
+    def test_metabolic_cmr_bootstrap_no_backlog_reflects(
+        self, clean_state, default_config
+    ):
+        """CMR hot + maintenance_count=0 + queue_backlog=0 -> /reflect."""
+        clean_state.metabolic = MetabolicState(
+            cmr=15.0, maintenance_count=0, alarm_keys=["cmr_hot"]
+        )
+        clean_state.queue_backlog = 0
+        signals = classify_signals(clean_state, default_config)
+        cmr = [s for s in signals if s.name == "metabolic_cmr"]
+        assert len(cmr) == 1
+        assert "/reflect" in cmr[0].action
+
+    def test_metabolic_cmr_mature_vault_reflects(
+        self, clean_state, default_config
+    ):
+        """CMR hot + maintenance_count>0 -> normal /reflect."""
+        clean_state.metabolic = MetabolicState(
+            cmr=15.0, maintenance_count=3, alarm_keys=["cmr_hot"]
+        )
+        clean_state.queue_backlog = 10
+        signals = classify_signals(clean_state, default_config)
+        cmr = [s for s in signals if s.name == "metabolic_cmr"]
+        assert len(cmr) == 1
+        assert "/reflect" in cmr[0].action
 
 
 # ---------------------------------------------------------------------------
@@ -645,7 +687,8 @@ class TestMultiAlarmMetabolicCascade:
     def test_qpr_and_cmr_simultaneous(self, clean_state, default_config):
         """QPR + CMR: higher-count signal wins within session speed tier."""
         clean_state.metabolic = MetabolicState(
-            qpr=5.0, cmr=15.0, alarm_keys=["qpr_critical", "cmr_hot"]
+            qpr=5.0, cmr=15.0, maintenance_count=1,
+            alarm_keys=["qpr_critical", "cmr_hot"],
         )
         signals = classify_signals(clean_state, default_config)
         session_signals = [s for s in signals if s.speed == "session"]
@@ -658,7 +701,7 @@ class TestMultiAlarmMetabolicCascade:
     def test_qpr_cmr_hcr_triple_alarm(self, clean_state, default_config):
         """QPR + CMR + HCR: session-speed beats multi-session."""
         clean_state.metabolic = MetabolicState(
-            qpr=5.0, cmr=15.0, hcr=5.0,
+            qpr=5.0, cmr=15.0, hcr=5.0, maintenance_count=1,
             alarm_keys=["qpr_critical", "cmr_hot", "hcr_low"],
         )
         signals = classify_signals(clean_state, default_config)

@@ -92,18 +92,35 @@ def classify_signals(state: VaultState, config: DaemonConfig) -> list[Signal]:
                 )
             )
         if "cmr_hot" in alarm_keys:
-            signals.append(
-                Signal(
-                    name="metabolic_cmr",
-                    count=int(m.cmr),
-                    speed="session",
-                    action="/reflect",
-                    rationale=(
-                        f"Creation:Maintenance ratio {m.cmr:.0f}:1 "
-                        f"(>{config.metabolic.cmr_hot:.0f}:1). Consolidate."
-                    ),
+            # Bootstrap guard: if no maintenance phases have ever completed
+            # and there is queue backlog, redirect to processing first.
+            _mc = getattr(m, "maintenance_count", 0)
+            if _mc == 0 and state.queue_backlog > 0:
+                signals.append(
+                    Signal(
+                        name="metabolic_cmr",
+                        count=int(m.cmr),
+                        speed="session",
+                        action="/ralph",
+                        rationale=(
+                            "Bootstrap mode: no reflect phases completed yet. "
+                            "Process queue items before first consolidation."
+                        ),
+                    )
                 )
-            )
+            else:
+                signals.append(
+                    Signal(
+                        name="metabolic_cmr",
+                        count=int(m.cmr),
+                        speed="session",
+                        action="/reflect",
+                        rationale=(
+                            f"Creation:Maintenance ratio {m.cmr:.0f}:1 "
+                            f"(>{config.metabolic.cmr_hot:.0f}:1). Consolidate."
+                        ),
+                    )
+                )
         if "tpv_stalled" in alarm_keys:
             _tpv_action = (
                 f"/ralph {state.queue_backlog}"

@@ -98,6 +98,7 @@ class MetabolicState:
     gcr: float = 1.0
     ipr: float = 0.0
     vdr: float = 0.0
+    maintenance_count: int = 0
     alarm_keys: list[str] = field(default_factory=list)
     total_notes: int = 0
     total_hypotheses: int = 0
@@ -189,7 +190,7 @@ def compute_cmr(
     queue_data: dict | None = None,
     queue_path: Path | None = None,
     lookback_days: int = 7,
-) -> float:
+) -> tuple[float, int]:
     """Compute Creation:Maintenance Ratio over the lookback window.
 
     Creation = notes with `created` date in last N days.
@@ -203,7 +204,8 @@ def compute_cmr(
         lookback_days: Window for rate computations.
 
     Returns:
-        CMR value. Higher = more creation-heavy.
+        Tuple of (CMR value, raw maintenance count).
+        CMR is higher when creation-heavy.
     """
     cutoff = datetime.now(UTC) - timedelta(days=lookback_days)
     cutoff_date = cutoff.date()
@@ -262,7 +264,7 @@ def compute_cmr(
         except (ValueError, TypeError):
             continue
 
-    return max(creation, 1) / max(maintenance, 1)
+    return max(creation, 1) / max(maintenance, 1), maintenance
 
 
 def compute_hcr(hypotheses_dir: Path) -> tuple[float, int]:
@@ -544,18 +546,20 @@ def compute_metabolic_state(
     else:
         gcr_value = 1.0  # Default when orphan data not available
 
+    cmr_value, maintenance_count = compute_cmr(
+        notes_dir=notes_dir,
+        queue_data=queue_data,
+        queue_path=queue_path,
+        lookback_days=lookback_days,
+    )
+
     state = MetabolicState(
         qpr=compute_qpr(
             queue_data=queue_data,
             queue_path=queue_path,
             lookback_days=lookback_days,
         ),
-        cmr=compute_cmr(
-            notes_dir=notes_dir,
-            queue_data=queue_data,
-            queue_path=queue_path,
-            lookback_days=lookback_days,
-        ),
+        cmr=cmr_value,
         tpv=compute_tpv(
             queue_data=queue_data,
             queue_path=queue_path,
@@ -569,6 +573,7 @@ def compute_metabolic_state(
             lookback_days=lookback_days,
         ),
         vdr=compute_vdr(notes_dir),
+        maintenance_count=maintenance_count,
         total_notes=total_notes,
         total_hypotheses=total_hypotheses,
     )

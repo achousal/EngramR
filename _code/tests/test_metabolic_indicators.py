@@ -213,8 +213,9 @@ class TestComputeCMR:
                 for i in range(3)
             ]
         }
-        cmr = compute_cmr(notes, queue_data=queue_data, lookback_days=7)
+        cmr, maint = compute_cmr(notes, queue_data=queue_data, lookback_days=7)
         assert abs(cmr - 1.0) < 0.01
+        assert maint == 3
 
     def test_creation_dominant(self, tmp_path):
         """High creation, no maintenance -> ratio = creation/1."""
@@ -225,8 +226,9 @@ class TestComputeCMR:
             (notes / f"note-{i}.md").write_text(
                 f'---\ncreated: "{today}"\n---\nContent\n'
             )
-        cmr = compute_cmr(notes, queue_data={"tasks": []}, lookback_days=7)
+        cmr, maint = compute_cmr(notes, queue_data={"tasks": []}, lookback_days=7)
         assert cmr == 15.0  # 15 / max(0,1) = 15
+        assert maint == 0
 
     def test_maintenance_only(self, tmp_path):
         """No recent creation, some maintenance -> CMR = 1/N."""
@@ -248,9 +250,10 @@ class TestComputeCMR:
                 }
             ]
         }
-        cmr = compute_cmr(notes, queue_data=queue_data, lookback_days=7)
+        cmr, maint = compute_cmr(notes, queue_data=queue_data, lookback_days=7)
         # 0 recent creation -> max(0,1)=1, 1 maintenance -> 1/1 = 1
         assert abs(cmr - 1.0) < 0.01
+        assert maint == 1
 
 
 # ---------------------------------------------------------------------------
@@ -668,6 +671,52 @@ class TestComputeMetabolicState:
         # No alarms on empty vault
         assert state.alarm_keys == []
 
+    def test_maintenance_count_populated(self, tmp_path):
+        """maintenance_count is set from compute_cmr in compute_metabolic_state."""
+        notes = tmp_path / "notes"
+        notes.mkdir()
+        hyps = tmp_path / "_research" / "hypotheses"
+        hyps.mkdir(parents=True)
+        (tmp_path / "inbox").mkdir()
+        queue_dir = tmp_path / "ops" / "queue"
+        queue_dir.mkdir(parents=True)
+
+        now = datetime.now(UTC)
+        queue = {
+            "tasks": [
+                {
+                    "id": "t1",
+                    "type": "claim",
+                    "status": "done",
+                    "completed_phases": ["create", "reflect"],
+                    "completed": (now - timedelta(days=1)).isoformat(),
+                },
+                {
+                    "id": "t2",
+                    "type": "claim",
+                    "status": "done",
+                    "completed_phases": ["create", "reweave"],
+                    "completed": (now - timedelta(days=2)).isoformat(),
+                },
+            ]
+        }
+        (queue_dir / "queue.json").write_text(json.dumps(queue))
+
+        state = compute_metabolic_state(tmp_path)
+        assert state.maintenance_count == 2
+
+    def test_maintenance_count_zero_when_no_maintenance(self, tmp_path):
+        """maintenance_count is 0 when no reflect/reweave phases completed."""
+        (tmp_path / "notes").mkdir()
+        (tmp_path / "_research" / "hypotheses").mkdir(parents=True)
+        (tmp_path / "inbox").mkdir()
+        queue_dir = tmp_path / "ops" / "queue"
+        queue_dir.mkdir(parents=True)
+        (queue_dir / "queue.json").write_text('{"tasks": []}')
+
+        state = compute_metabolic_state(tmp_path)
+        assert state.maintenance_count == 0
+
 
 # ---------------------------------------------------------------------------
 # Bare-list queue format (regression for queue.json as JSON array)
@@ -721,7 +770,7 @@ class TestBareListQueueFormat:
                 "completed": (now - timedelta(days=1)).isoformat(),
             },
         ]
-        cmr = compute_cmr(notes, queue_data=queue_data, lookback_days=7)
+        cmr, _maint = compute_cmr(notes, queue_data=queue_data, lookback_days=7)
         assert cmr >= 0
 
     def test_reads_bare_list_from_disk(self, tmp_path):
