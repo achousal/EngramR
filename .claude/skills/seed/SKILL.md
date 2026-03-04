@@ -7,7 +7,7 @@ user-invocable: true
 context: fork
 model: sonnet
 allowed-tools: Read, Write, Edit, Grep, Glob, Bash
-argument-hint: "[file] [--no-confirm] [--methods-only] — path to source file to seed for processing"
+argument-hint: "[file] | --all [--no-confirm] [--methods-only] — path to source file to seed for processing"
 ---
 
 ## EXECUTE NOW
@@ -15,11 +15,12 @@ argument-hint: "[file] [--no-confirm] [--methods-only] — path to source file t
 **Target: $ARGUMENTS**
 
 Parse arguments:
-- File path (required unless listing): the source file to seed
-- `--no-confirm`: skip interactive duplicate-confirmation prompt. If a duplicate is detected, auto-skip and log "Skipped {file}: duplicate detected (--no-confirm)". All other seed operations proceed normally. Used by daemon P2.5 and `/pipeline --all`.
+- File path (required unless listing or --all): the source file to seed
+- `--all`: loop over ALL files in inbox/, seeding each with `--no-confirm`. After seeding all files, report count and recommend `/ralph N`.
+- `--no-confirm`: skip interactive duplicate-confirmation prompt. If a duplicate is detected, auto-skip and log "Skipped {file}: duplicate detected (--no-confirm)". All other seed operations proceed normally. Used by daemon P2.5 and `/seed --all`.
 - `--methods-only`: restrict downstream extraction to methodology-comparisons and design-patterns only. Sets `scope: "methods_only"` on the extract task and queue entry. Use for cross-domain papers that are methodologically relevant but not disease-specific.
 
-The target MUST be a file path. If no target provided, list inbox/ contents and ask which to seed.
+The target MUST be a file path (unless `--all`). If no target and no `--all`, list inbox/ contents and ask which to seed.
 
 **START NOW.** Seed the source file into the processing queue.
 
@@ -268,7 +269,6 @@ Queue: updated with extract task
 
 Next steps:
   /ralph 1 --batch {SOURCE_BASENAME}     (extract claims)
-  /pipeline will handle this automatically
 ```
 
 ---
@@ -323,6 +323,32 @@ When /archive-batch runs later, it moves task files into the existing archive fo
 **Large source (2500+ lines):** Note in output: "Large source ({N} lines) -- /reduce will chunk automatically."
 
 **Source is a URL or non-file:** Report error: "/seed requires a file path."
+
+---
+
+## Batch Mode (--all)
+
+When `--all` is set:
+
+1. List all files in `inbox/` (including subdirectories).
+2. For each file, run Steps 1-8 with `--no-confirm` (skip duplicate confirmation).
+3. Track results: seeded count, skipped count (duplicates), error count.
+4. After all files processed, report:
+
+```
+--=={ seed --all }==--
+
+Seeded: {seeded_count} files
+Skipped: {skipped_count} (duplicates)
+Errors: {error_count}
+
+Files seeded:
+  {list of seeded filenames}
+
+Next: /ralph {seeded_count} to process all extractions
+```
+
+5. Do NOT auto-run /ralph. The user controls pacing.
 
 ---
 

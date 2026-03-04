@@ -134,7 +134,7 @@ If the queue file does not exist or is empty, report: "Queue is empty. Use /seed
 
 ## Step 2: Filter Tasks
 
-Build a list of **actionable tasks** — tasks where `status == "pending"`. Order by position in the tasks array (first = highest priority).
+Build a list of **actionable tasks** — tasks where `status == "pending"`. Order by PIPELINE_ORDER (reduce < create < enrich < reflect < reweave < verify), then by position in the tasks array within the same phase.
 
 Apply filters:
 - If `--batch` specified: keep only tasks where `batch` matches
@@ -171,13 +171,18 @@ The `phase_order` header defines the phase sequence:
 
 ## Step 3: Queue Overview
 
+**Canonical pipeline order** (all display components use this):
+```
+PIPELINE_ORDER = [reduce, create, enrich, reflect, reweave, verify]
+```
+
 Show the compact queue overview. Merge phase gate results, pipeline advisory tips, and actionable state into a single block:
 
 ```
 --=={ ralph }==--
 
 Queue: X pending, Y done
-Actionable: {count} ({N} verify, {N} enrich, {N} reduce, ...)
+Actionable: {count} ({N} reduce, {N} create, {N} enrich, ...)
 Blocked: {N} reflect, {N} reweave -- {reason why, e.g. "35 enrich tasks must finish first so reflect sees the full claim surface"}
 
 Next:
@@ -186,16 +191,16 @@ Next:
 ...
 
 Options:
+- /ralph {N} --type reduce -- process extractions first
 - /ralph {N} --type enrich -- clear enrich backlog (unlocks reflect)
-- /ralph {N} --type verify -- clear verify backlog
 - /ralph {N} -- all eligible tasks
 ```
 
 **Formatting rules:**
-- `Actionable` line: group and label by `current_phase` (not `type`). This is critical because `--type` filters on `current_phase`. Extraction tasks have `type: extract` but `current_phase: reduce` -- label them as `reduce` so the suggested `--type` commands match. Only list phases that have >0 actionable tasks.
+- `Actionable` line: group and label by `current_phase` (not `type`). List phases in PIPELINE_ORDER (reduce, create, enrich, reflect, reweave, verify). Drop phases with 0 actionable tasks. This is critical because `--type` filters on `current_phase`. Extraction tasks have `type: extract` but `current_phase: reduce` -- label them as `reduce` so the suggested `--type` commands match.
 - `Blocked` line: only show if tasks were blocked by the phase gate. Include a SHORT rationale (one clause, not a paragraph) explaining why the earlier phase must finish first. If nothing is blocked, omit the line entirely.
-- `Next` list: show up to 8 tasks. Truncate claim titles to ~60 chars with `...`.
-- `Options`: show 2-4 concrete commands based on the actionable phase distribution. Include a brief label for what each does. **Order by strategic impact**: phases that unblock downstream work first (e.g., enrich before verify), terminal phases last.
+- `Next` list: show up to 8 tasks. Sort by PIPELINE_ORDER first (reduce tasks before create before enrich, etc.), then by queue position within the same phase. Truncate claim titles to ~60 chars with `...`.
+- `Options`: show 2-4 concrete commands based on the actionable phase distribution. Include a brief label for what each does. **Order by PIPELINE_ORDER** (earliest phase first). Earlier phases unblock downstream work, so pipeline order IS strategic order.
 
 **If all tasks blocked:**
 ```
