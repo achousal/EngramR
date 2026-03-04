@@ -7,12 +7,16 @@ user-invocable: true
 context: fork
 model: sonnet
 allowed-tools: Read, Write, Edit, Grep, Glob, Bash
-argument-hint: "[file] — path to source file to seed for processing"
+argument-hint: "[file] [--no-confirm] — path to source file to seed for processing"
 ---
 
 ## EXECUTE NOW
 
 **Target: $ARGUMENTS**
+
+Parse arguments:
+- File path (required unless listing): the source file to seed
+- `--no-confirm`: skip interactive duplicate-confirmation prompt. If a duplicate is detected, auto-skip and log "Skipped {file}: duplicate detected (--no-confirm)". All other seed operations proceed normally. Used by daemon P2.5 and `/pipeline --all`.
 
 The target MUST be a file path. If no target provided, list inbox/ contents and ask which to seed.
 
@@ -73,9 +77,10 @@ grep -rl "{key terms from source title}" notes/ 2>/dev/null | head -5
 
 If either check finds a match:
 - Show what was found (filename match or content overlap)
-- Ask: "This source may have been processed before. Proceed anyway? (y/n)"
-- If the user declines, stop cleanly
-- If the user confirms (or no duplicate found), continue
+- **If `--no-confirm` is set:** auto-skip this file. Log "Skipped {file}: duplicate detected (--no-confirm)" and stop cleanly. Do NOT proceed with seeding.
+- **Otherwise:** Ask: "This source may have been processed before. Proceed anyway? (y/n)"
+  - If the user declines, stop cleanly
+  - If the user confirms (or no duplicate found), continue
 
 ## Step 3: Create Archive Structure
 
