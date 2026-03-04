@@ -8,8 +8,12 @@ import pytest
 
 from engram_r.schema_validator import (
     ValidationResult,
+    check_nonstandard_headers,
     check_notes_provenance,
     check_queue_provenance,
+    check_title_echo,
+    check_topics_footer,
+    check_wiki_link_targets,
     detect_unicode_issues,
     detect_yaml_safety_issues,
     normalize_text,
@@ -1161,3 +1165,191 @@ class TestCheckQueueProvenance:
         )
         result = check_queue_provenance("apoe genotype modifies", queue_dir)
         assert result.valid
+
+
+# ---------------------------------------------------------------------------
+# check_title_echo (B1)
+# ---------------------------------------------------------------------------
+
+
+class TestTitleEcho:
+    """B1: Body starting with # heading should be blocked."""
+
+    def test_heading_blocks(self):
+        content = _note(
+            ['description: "Some claim"', "type: claim"],
+            body="# This is the title echo\n\nBody text here.\n",
+        )
+        result = check_title_echo(content)
+        assert not result.valid
+        assert any("Title echo" in e for e in result.errors)
+
+    def test_prose_passes(self):
+        content = _note(
+            ['description: "Some claim"', "type: claim"],
+            body="This claim argues that mechanisms are complex.\n",
+        )
+        result = check_title_echo(content)
+        assert result.valid
+
+    def test_blank_lines_before_heading(self):
+        content = _note(
+            ['description: "Some claim"', "type: claim"],
+            body="\n\n# Title echo after blanks\n\nBody.\n",
+        )
+        result = check_title_echo(content)
+        assert not result.valid
+
+    def test_no_frontmatter(self):
+        content = "# Just a heading\n\nSome text.\n"
+        result = check_title_echo(content)
+        assert not result.valid
+
+
+# ---------------------------------------------------------------------------
+# check_nonstandard_headers (B2)
+# ---------------------------------------------------------------------------
+
+
+class TestNonstandardHeaders:
+    """B2: Section headings in claim body should warn."""
+
+    def test_claim_warns(self):
+        content = _note(
+            ['description: "Some claim"', "type: claim"],
+            body="Body text.\n\n## Source\n[[paper]]\n",
+        )
+        result = check_nonstandard_headers(content)
+        assert result.valid  # warn, not block
+        assert len(result.warnings) > 0
+        assert any("## Source" in w for w in result.warnings)
+
+    def test_tension_exempt(self):
+        content = _note(
+            ['description: "A tension"', "type: tension"],
+            body="## Side A\nArgument.\n\n## Side B\nCounter.\n",
+        )
+        result = check_nonstandard_headers(content)
+        assert result.valid
+        assert result.warnings == []
+
+    def test_clean_passes(self):
+        content = _note(
+            ['description: "Some claim"', "type: claim"],
+            body="Body text with no section headings.\n\nMore text.\n",
+        )
+        result = check_nonstandard_headers(content)
+        assert result.valid
+        assert result.warnings == []
+
+
+# ---------------------------------------------------------------------------
+# check_wiki_link_targets (B3)
+# ---------------------------------------------------------------------------
+
+
+class TestWikiLinkTargets:
+    """B3: Dangling wiki-links should be blocked."""
+
+    def test_valid_passes(self, tmp_path):
+        """Links to existing files resolve."""
+        notes_dir = tmp_path / "notes"
+        notes_dir.mkdir()
+        (notes_dir / "existing claim.md").write_text("---\ndescription: x\n---\n")
+        content = _note(
+            ['description: "Test"', "type: claim"],
+            body="See [[existing claim]] for details.\n",
+        )
+        result = check_wiki_link_targets(content, tmp_path)
+        assert result.valid
+
+    def test_missing_blocks(self, tmp_path):
+        """Links to nonexistent files produce errors."""
+        notes_dir = tmp_path / "notes"
+        notes_dir.mkdir()
+        content = _note(
+            ['description: "Test"', "type: claim"],
+            body="See [[nonexistent target]] for details.\n",
+        )
+        result = check_wiki_link_targets(content, tmp_path)
+        assert not result.valid
+        assert any("nonexistent target" in e for e in result.errors)
+
+    def test_accent_resolves(self, tmp_path):
+        """Accented filename resolves when link uses accent variant."""
+        lit_dir = tmp_path / "_research" / "literature"
+        lit_dir.mkdir(parents=True)
+        (lit_dir / "2025-mart\u00ednez-study.md").write_text("---\ntitle: x\n---\n")
+        content = _note(
+            ['description: "Test"', "type: claim"],
+            body="See [[2025-mart\u00ednez-study]] for details.\n",
+        )
+        result = check_wiki_link_targets(content, tmp_path)
+        assert result.valid
+
+    def test_pipe_alias(self, tmp_path):
+        """Wiki-links with pipe alias extract target correctly."""
+        notes_dir = tmp_path / "notes"
+        notes_dir.mkdir()
+        (notes_dir / "long claim title.md").write_text("---\ndescription: x\n---\n")
+        content = _note(
+            ['description: "Test"', "type: claim"],
+            body="See [[long claim title|short]] for details.\n",
+        )
+        result = check_wiki_link_targets(content, tmp_path)
+        assert result.valid
+
+    def test_space_hyphen_resolves(self, tmp_path):
+        """Space-vs-hyphen mismatches resolve."""
+        notes_dir = tmp_path / "notes"
+        notes_dir.mkdir()
+        (notes_dir / "p-tau217 is elevated.md").write_text(
+            "---\ndescription: x\n---\n"
+        )
+        content = _note(
+            ['description: "Test"', "type: claim"],
+            body="See [[p-tau217 is elevated]] for details.\n",
+        )
+        result = check_wiki_link_targets(content, tmp_path)
+        assert result.valid
+
+
+# ---------------------------------------------------------------------------
+# check_topics_footer (B4)
+# ---------------------------------------------------------------------------
+
+
+class TestTopicsFooter:
+    """B4: Missing Topics footer should warn."""
+
+    def test_missing_warns(self):
+        content = _note(
+            ['description: "Some claim"', "type: claim"],
+            body="Body text.\n\n---\n\nSource: [[paper]]\n",
+        )
+        result = check_topics_footer(content)
+        assert result.valid  # warn, not block
+        assert len(result.warnings) > 0
+        assert any("Topics" in w for w in result.warnings)
+
+    def test_present_passes(self):
+        content = _note(
+            ['description: "Some claim"', "type: claim"],
+            body=(
+                "Body text.\n\n---\n\n"
+                "Source: [[paper]]\n\n"
+                "Topics:\n- [[some-topic-map]]\n"
+            ),
+        )
+        result = check_topics_footer(content)
+        assert result.valid
+        assert result.warnings == []
+
+    def test_moc_exempt(self):
+        content = _note(
+            ['description: "Navigation hub"', "type: moc"],
+            body="## Core Ideas\n- [[claim]]\n",
+        )
+        result = check_topics_footer(content)
+        assert result.valid
+        assert result.warnings == []

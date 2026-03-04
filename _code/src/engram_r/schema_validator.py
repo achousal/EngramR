@@ -15,6 +15,7 @@ import html.parser
 import re
 import unicodedata
 from dataclasses import dataclass, field
+from functools import lru_cache
 from pathlib import Path
 
 import yaml
@@ -535,3 +536,278 @@ def check_notes_provenance(content: str) -> ValidationResult:
         errors=errors,
         warnings=warnings,
     )
+
+
+# ---------------------------------------------------------------------------
+# Structural compliance checks (B1-B4)
+# ---------------------------------------------------------------------------
+
+# Regex to extract wiki-link targets from body text: [[target]] or [[target|alias]]
+_WIKI_LINK_CONTENT_RE = re.compile(r"\[\[([^\]|]+)(?:\|[^\]]+)?\]\]")
+
+# Note types exempt from header and topics-footer checks (navigation hubs).
+_HEADER_EXEMPT_TYPES = frozenset({"tension", "moc", "hub", "index", "topic-map"})
+
+# Directories searched for wiki-link resolution.
+_WIKI_LINK_SEARCH_DIRS = (
+    "notes",
+    "_research/literature",
+    "_research/hypotheses",
+    "_research/experiments",
+)
+
+
+def _strip_accents(s: str) -> str:
+    """NFD decompose and strip combining marks, then NFC normalize remainder.
+
+    >>> _strip_accents("caf\u00e9") == "cafe"
+    True
+    """
+    nfd = unicodedata.normalize("NFD", s)
+    stripped = "".join(ch for ch in nfd if unicodedata.category(ch) != "Mn")
+    return unicodedata.normalize("NFC", stripped)
+
+
+def _build_stem_index(vault_root: Path) -> dict[str, str]:
+    """Map normalized filename stems to actual stems for link resolution.
+
+    Returns a dict where keys are lowercased, accent-stripped, space-to-hyphen
+    normalized stems, and values are the original filename stems.  This enables
+    fuzzy matching for common mismatches.
+    """
+    index: dict[str, str] = {}
+    for search_dir in _WIKI_LINK_SEARCH_DIRS:
+        d = vault_root / search_dir
+        if not d.is_dir():
+            continue
+        for md_file in d.glob("*.md"):
+            stem = md_file.stem
+            # Index under multiple normalized forms
+            lower = stem.lower()
+            index[lower] = stem
+            # Accent-stripped
+            accent_stripped = _strip_accents(lower)
+            if accent_stripped != lower:
+                index[accent_stripped] = stem
+            # Space-to-hyphen variant
+            hyphenated = lower.replace(" ", "-")
+            if hyphenated != lower:
+                index[hyphenated] = stem
+            # Accent-stripped + hyphenated
+            combo = _strip_accents(hyphenated)
+            if combo not in index:
+                index[combo] = stem
+    return index
+
+
+def _get_body(content: str) -> str:
+    """Extract body text after frontmatter."""
+    fm_match = _FM_PATTERN.match(content)
+    if fm_match:
+        return content[fm_match.end():]
+    return content
+
+
+def _get_fm_type(content: str) -> str | None:
+    """Extract the type field from frontmatter, or None."""
+    fm_match = _FM_PATTERN.match(content)
+    if not fm_match:
+        return None
+    try:
+        fm = yaml.safe_load(fm_match.group(1))
+    except yaml.YAMLError:
+        return None
+    if isinstance(fm, dict):
+        return fm.get("type")
+    return None
+
+
+def check_title_echo(content: str) -> ValidationResult:
+    """B1: BLOCK if the first non-blank body line starts with ``# ``.
+
+    Claim notes should not echo their title as an H1 heading -- the title
+    lives in the filename.
+
+    Args:
+        content: Full note content (with frontmatter).
+
+    Returns:
+        ValidationResult with error if title echo found.
+    """
+    body = _get_body(content)
+    for line in body.splitlines():
+        stripped = line.strip()
+        if not stripped:
+            continue
+        if stripped.startswith("# "):
+            return ValidationResult(
+                valid=False,
+                errors=[
+                    "Title echo: body starts with '# ' heading. "
+                    "The title lives in the filename -- begin directly "
+                    "with the argument body (no heading)."
+                ],
+            )
+        # First non-blank line is not a heading -- pass
+        return ValidationResult(valid=True)
+
+    # Body is all blank lines -- pass
+    return ValidationResult(valid=True)
+
+
+def check_nonstandard_headers(content: str) -> ValidationResult:
+    """B2: WARN if body contains ``## `` section headings.
+
+    Claim notes should use prose structure, not section headings.
+    Tension, moc, hub, index, and topic-map types are exempt.
+
+    Args:
+        content: Full note content (with frontmatter).
+
+    Returns:
+        ValidationResult with warning if non-standard headers found.
+    """
+    note_type = _get_fm_type(content)
+    if note_type in _HEADER_EXEMPT_TYPES:
+        return ValidationResult(valid=True)
+
+    body = _get_body(content)
+    for line in body.splitlines():
+        stripped = line.strip()
+        if stripped.startswith("## "):
+            return ValidationResult(
+                valid=True,
+                warnings=[
+                    f"Non-standard section heading in claim body: '{stripped}'. "
+                    f"Prefer prose structure with plain-text footer labels "
+                    f"(Source:, Relevant Notes:, Topics:) instead of ## headings."
+                ],
+            )
+
+    return ValidationResult(valid=True)
+
+
+def check_wiki_link_targets(
+    content: str,
+    vault_root: Path,
+) -> ValidationResult:
+    """B3: BLOCK if any ``[[target]]`` in body or source: FM is unresolvable.
+
+    Searches notes/, _research/literature/, _research/hypotheses/, and
+    _research/experiments/ for matching filenames.  Tries NFC, accent-stripped,
+    and space-to-hyphen variants before failing.
+
+    Args:
+        content: Full note content (with frontmatter).
+        vault_root: Path to vault root directory.
+
+    Returns:
+        ValidationResult with errors for each unresolvable link.
+    """
+    # Collect all wiki-link targets from body
+    body = _get_body(content)
+    targets: set[str] = set()
+    for m in _WIKI_LINK_CONTENT_RE.finditer(body):
+        targets.add(m.group(1).strip())
+
+    # Also check source: frontmatter field
+    fm_match = _FM_PATTERN.match(content)
+    if fm_match:
+        try:
+            fm = yaml.safe_load(fm_match.group(1))
+            if isinstance(fm, dict):
+                source_val = fm.get("source", "")
+                if isinstance(source_val, str):
+                    for m in _WIKI_LINK_CONTENT_RE.finditer(source_val):
+                        targets.add(m.group(1).strip())
+        except yaml.YAMLError:
+            pass
+
+    if not targets:
+        return ValidationResult(valid=True)
+
+    # Build index of known stems
+    stem_index = _build_stem_index(vault_root)
+
+    errors: list[str] = []
+    for target in sorted(targets):
+        # Normalize target for lookup
+        nfc_target = normalize_text(target)
+        lower = nfc_target.lower()
+
+        # Try exact (lowered) match
+        if lower in stem_index:
+            continue
+
+        # Try accent-stripped
+        accent_stripped = _strip_accents(lower)
+        if accent_stripped in stem_index:
+            continue
+
+        # Try space-to-hyphen
+        hyphenated = lower.replace(" ", "-")
+        if hyphenated in stem_index:
+            continue
+
+        # Try accent-stripped + hyphenated
+        combo = _strip_accents(hyphenated)
+        if combo in stem_index:
+            continue
+
+        # Try hyphen-to-space (reverse)
+        spaced = lower.replace("-", " ")
+        if spaced in stem_index:
+            continue
+
+        errors.append(
+            f"Dangling wiki-link: [[{target}]] -- no matching file found in "
+            f"notes/, _research/literature/, _research/hypotheses/, "
+            f"or _research/experiments/."
+        )
+
+    if errors:
+        return ValidationResult(valid=False, errors=errors)
+    return ValidationResult(valid=True)
+
+
+def check_topics_footer(content: str) -> ValidationResult:
+    """B4: WARN if the note has no Topics footer with at least one link.
+
+    Exempt: moc, hub, index, topic-map types.
+
+    Args:
+        content: Full note content (with frontmatter).
+
+    Returns:
+        ValidationResult with warning if Topics footer missing.
+    """
+    note_type = _get_fm_type(content)
+    if note_type in _HEADER_EXEMPT_TYPES:
+        return ValidationResult(valid=True)
+
+    body = _get_body(content)
+
+    # Look for "Topics:" followed (eventually) by "- [[" on a subsequent line
+    lines = body.splitlines()
+    found_topics = False
+    for i, line in enumerate(lines):
+        if line.strip().startswith("Topics:"):
+            # Check remaining lines for a topic link
+            for subsequent in lines[i + 1:]:
+                stripped = subsequent.strip()
+                if stripped.startswith("- [["):
+                    found_topics = True
+                    break
+                if stripped and not stripped.startswith("-"):
+                    break  # Non-list content after Topics: -- malformed
+            break
+
+    if not found_topics:
+        return ValidationResult(
+            valid=True,
+            warnings=[
+                "Missing Topics footer: claims should end with "
+                "'Topics:\\n- [[topic-map]]' to prevent orphans."
+            ],
+        )
+    return ValidationResult(valid=True)

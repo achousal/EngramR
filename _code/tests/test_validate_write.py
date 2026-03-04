@@ -455,3 +455,52 @@ class TestMethodologySourceWarning:
         assert resp is not None
         assert resp["decision"] == "block"
         assert "Protected file" in resp["reason"]
+
+
+# ---------------------------------------------------------------------------
+# Tests: structural compliance checks (B1-B4 integration)
+# ---------------------------------------------------------------------------
+
+
+class TestTitleEchoIntegration:
+    """Title echo in notes/ files is blocked by the hook."""
+
+    def test_notes_title_echo_blocks(self):
+        content = _note(
+            [
+                'description: "Some insight about mechanisms"',
+                'source: "[[2026-study]]"',
+                "type: claim",
+            ],
+            body="# some insight about mechanisms\n\nBody text.\n",
+        )
+        stdout, stderr, exited = _run_hook(
+            "/vault/notes/some insight about mechanisms.md", content
+        )
+        resp = _parse_block_response(stdout)
+        assert resp is not None
+        assert resp["decision"] == "block"
+        assert "Title echo" in resp["reason"]
+        assert exited
+
+    def test_research_title_echo_not_blocked(self):
+        """Files outside notes/ skip structural checks."""
+        content = _note(
+            [
+                "type: hypothesis",
+                "title: Test hypothesis",
+                "id: hyp-001",
+                "status: proposed",
+                "elo: 1200",
+                "created: 2026-01-01",
+                "updated: 2026-01-01",
+            ],
+            body="# Test hypothesis\n\nBody text.\n",
+        )
+        stdout, stderr, exited = _run_hook(
+            "/vault/_research/hypotheses/test hypothesis.md", content
+        )
+        resp = _parse_block_response(stdout)
+        # Should NOT be blocked for title echo (not in notes/)
+        if resp is not None:
+            assert "Title echo" not in resp.get("reason", "")

@@ -495,9 +495,7 @@ created: "YYYY-MM-DD"
 [domain-specific fields if applicable]
 ---
 
-# [prose-as-title proposition]
-
-[Body: 150-400 words showing reasoning]
+[Body: begin directly with the argument body (no heading -- the title lives in the filename). 150-400 words showing reasoning.]
 
 Use connective words: because, but, therefore, which means, however.
 Acknowledge uncertainty where appropriate.
@@ -862,6 +860,8 @@ Relevant Notes:
 Topics:
 - [[relevant topic map]]
 ```
+
+Footer labels (Source:, Relevant Notes:, Topics:) are plain-text labels after a `---` divider, NOT `##` Markdown section headings. Never use `## Source` or `## Relevant Notes` -- these create non-standard structure that triggers validation warnings.
 
 The relationship context explains WHY to follow the link:
 - Bad: "-- related"

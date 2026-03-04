@@ -35,8 +35,12 @@ sys.path.insert(0, str(_CODE_DIR / "src"))
 from engram_r.hook_utils import load_config, resolve_vault  # noqa: E402
 from engram_r.integrity import MONITORED_DIRS, PROTECTED_PATHS  # noqa: E402
 from engram_r.schema_validator import (  # noqa: E402
+    check_nonstandard_headers,
     check_notes_provenance,
     check_queue_provenance,
+    check_title_echo,
+    check_topics_footer,
+    check_wiki_link_targets,
     detect_unicode_issues,
     detect_yaml_safety_issues,
     validate_filename,
@@ -248,6 +252,38 @@ def main() -> None:
             }
             print(json.dumps(response))
             sys.exit(0)
+
+        # B1: Title echo -- BLOCK if body starts with # heading
+        title_echo = check_title_echo(content)
+        if not title_echo.valid:
+            response = {
+                "decision": "block",
+                "reason": "; ".join(title_echo.errors),
+            }
+            print(json.dumps(response))
+            sys.exit(0)
+
+        # B2: Non-standard headers -- WARN
+        headers = check_nonstandard_headers(content)
+        if headers.warnings:
+            for w in headers.warnings:
+                print(f"WARN: {w}", file=sys.stderr)
+
+        # B3: Wiki-link targets -- BLOCK on dangling links
+        wiki_links = check_wiki_link_targets(content, vault)
+        if not wiki_links.valid:
+            response = {
+                "decision": "block",
+                "reason": "; ".join(wiki_links.errors),
+            }
+            print(json.dumps(response))
+            sys.exit(0)
+
+        # B4: Topics footer -- WARN if missing
+        topics = check_topics_footer(content)
+        if topics.warnings:
+            for w in topics.warnings:
+                print(f"WARN: {w}", file=sys.stderr)
 
         # Queue provenance: verify a task file exists for new claims.
         # Only applies to Write (new files), not Edit (updates to existing).
