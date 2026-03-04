@@ -6,7 +6,7 @@ generated_from: "arscontexta-v1.6"
 user-invocable: true
 context: normal
 allowed-tools: Read, Write, Edit, Grep, Glob, Bash, Agent
-argument-hint: "[N] [--parallel] [--batch id] [--type extract] [--dry-run] — N = number of tasks to process (optional: omit for overview)"
+argument-hint: "[N] [--parallel] [--batch id] [--type reduce] [--dry-run] — N = number of tasks to process (optional: omit for overview)"
 ---
 
 ## EXECUTE NOW
@@ -17,7 +17,7 @@ Parse arguments:
 - N (optional): number of tasks to process. If omitted (bare `/ralph`), run Steps 0-3 to show the queue overview, then ask the user how many to process before continuing to Step 4.
 - --parallel: concurrent claim workers (max 5) + cross-connect validation
 - --batch [id]: process only tasks from specific batch
-- --type [type]: process only tasks at a specific phase (extract, create, reflect, reweave, verify, enrich)
+- --type [type]: process only tasks at a specific `current_phase` (reduce, create, reflect, reweave, verify, enrich). Note: extraction tasks have `type: extract` but `current_phase: reduce` -- use `--type reduce` to select them.
 - --dry-run: show what would execute without running
 - --handoff: output structured RALPH HANDOFF block at end (for pipeline chaining)
 
@@ -148,7 +148,7 @@ Enforce phase ordering across all pending tasks. Later phases cannot run while e
 2. Apply blocking rules:
    - If **any** tasks are pending at `create` or `enrich`: **exclude** tasks at `reflect` and `reweave` from the actionable list.
    - If **any** tasks are pending at `reflect`: **exclude** tasks at `reweave` from the actionable list.
-3. `extract` and `verify` tasks are **never blocked** by this gate. Extract is upstream of everything; verify is a quality check that does not create new connections.
+3. `reduce` and `verify` tasks are **never blocked** by this gate. Reduce (which processes extract-type tasks) is upstream of everything; verify is a quality check that does not create new connections.
 4. Remove ineligible tasks from the actionable list.
 
 Do NOT display verbose phase gate messages here. Gate results are folded into the compact overview in Step 3.
@@ -177,7 +177,7 @@ Show the compact queue overview. Merge phase gate results, pipeline advisory tip
 --=={ ralph }==--
 
 Queue: X pending, Y done
-Actionable: {count} ({N} verify, {N} enrich, {N} extract, ...)
+Actionable: {count} ({N} verify, {N} enrich, {N} reduce, ...)
 Blocked: {N} reflect, {N} reweave -- {reason why, e.g. "35 enrich tasks must finish first so reflect sees the full claim surface"}
 
 Next:
@@ -192,7 +192,7 @@ Options:
 ```
 
 **Formatting rules:**
-- `Actionable` line: only list phases that have >0 actionable tasks.
+- `Actionable` line: group and label by `current_phase` (not `type`). This is critical because `--type` filters on `current_phase`. Extraction tasks have `type: extract` but `current_phase: reduce` -- label them as `reduce` so the suggested `--type` commands match. Only list phases that have >0 actionable tasks.
 - `Blocked` line: only show if tasks were blocked by the phase gate. Include a SHORT rationale (one clause, not a paragraph) explaining why the earlier phase must finish first. If nothing is blocked, omit the line entirely.
 - `Next` list: show up to 8 tasks. Truncate claim titles to ~60 chars with `...`.
 - `Options`: show 2-4 concrete commands based on the actionable phase distribution. Include a brief label for what each does. **Order by strategic impact**: phases that unblock downstream work first (e.g., enrich before verify), terminal phases last.
