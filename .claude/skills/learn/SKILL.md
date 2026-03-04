@@ -218,7 +218,8 @@ Researching: [topic]
 
   Filed to: inbox/[filename]
 
-  Next: /reduce inbox/[filename]
+  Next: /ralph 1 --batch [filename]
+    Or: /reduce inbox/[filename]  (single file, manual)
     [chaining context]
 
   [goals.md updated with N new research directions]
