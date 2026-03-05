@@ -134,41 +134,41 @@ EngramR/
 
 ## Commands at a glance
 
-| Command | What it does |
-| --- | --- |
-| `/research` | Orchestrate the co-scientist generate-debate-evolve loop |
-| `/generate` | Produce literature-grounded hypotheses (4 modes) |
-| `/review` | Critically evaluate hypotheses (6 review lenses) |
-| `/tournament` | Rank hypotheses via pairwise Elo-rated debate |
-| `/evolve` | Refine top hypotheses into stronger versions (5 modes) |
-| `/landscape` | Map hypothesis space -- clusters, gaps, redundancies |
-| `/meta-review` | Synthesize debate patterns into actionable feedback |
-| `/literature` | Search PubMed, arXiv, Semantic Scholar, OpenAlex |
-| `/experiment` | Log experiments with parameters, results, and artifacts |
-| `/eda` | Exploratory data analysis with PII auto-redaction |
-| `/plot` | Publication-quality figures with statistical annotations |
-| `/reduce` | Extract atomic claims from inbox sources |
-| `/reflect` | Find connections between claims, update topic maps |
-| `/reweave` | Revisit old claims with new context |
-| `/verify` | Quality-check claims (description, schema, links) |
-| `/onboard` | Bootstrap lab integration -- scan, register, wire |
-| `/init` | Seed foundational knowledge claims |
-| `/next` | Surface the most valuable next action |
-| `/stats` | Vault metrics; `--dev` for code section health |
-| `/health` | Comprehensive vault health check |
-| `/learn` | Research a topic and grow the knowledge graph |
-| `/seed` | Queue a source file for processing (dedup, archive, task creation) |
-| `/enrich` | Integrate new evidence into existing claims with provenance |
-| `/ralph` | Queue processing with fresh context per phase (serial/parallel) |
-| `/archive-batch` | Archive completed processing batches |
-| `/profile` | Create, list, show, and activate domain profiles |
-| `/project` | Register, update, and query research projects |
-| `/graph` | Interactive knowledge graph analysis (health, triangles, bridges) |
-| `/remember` | Capture friction as methodology observations |
-| `/rethink` | Challenge system assumptions against accumulated evidence |
-| `/refactor` | Plan vault restructuring from config changes |
-| `/tasks` | View and manage the task stack and processing queue |
-| `/dev` | Code section health checks (tests, lint, build, coverage) |
+| Command          | What it does                                                       |
+| ---------------- | ------------------------------------------------------------------ |
+| `/research`      | Orchestrate the co-scientist generate-debate-evolve loop           |
+| `/generate`      | Produce literature-grounded hypotheses (4 modes)                   |
+| `/review`        | Critically evaluate hypotheses (6 review lenses)                   |
+| `/tournament`    | Rank hypotheses via pairwise Elo-rated debate                      |
+| `/evolve`        | Refine top hypotheses into stronger versions (5 modes)             |
+| `/landscape`     | Map hypothesis space -- clusters, gaps, redundancies               |
+| `/meta-review`   | Synthesize debate patterns into actionable feedback                |
+| `/literature`    | Search PubMed, arXiv, Semantic Scholar, OpenAlex                   |
+| `/experiment`    | Log experiments with parameters, results, and artifacts            |
+| `/eda`           | Exploratory data analysis with PII auto-redaction                  |
+| `/plot`          | Publication-quality figures with statistical annotations           |
+| `/reduce`        | Extract atomic claims from inbox sources                           |
+| `/reflect`       | Find connections between claims, update topic maps                 |
+| `/reweave`       | Revisit old claims with new context                                |
+| `/verify`        | Quality-check claims (description, schema, links)                  |
+| `/onboard`       | Bootstrap lab integration -- scan, register, wire                  |
+| `/init`          | Seed foundational knowledge claims                                 |
+| `/next`          | Surface the most valuable next action                              |
+| `/stats`         | Vault metrics; `--dev` for code section health                     |
+| `/health`        | Comprehensive vault health check                                   |
+| `/learn`         | Research a topic and grow the knowledge graph                      |
+| `/seed`          | Queue a source file for processing (dedup, archive, task creation) |
+| `/enrich`        | Integrate new evidence into existing claims with provenance        |
+| `/ralph`         | Queue processing with fresh context per phase (serial/parallel)    |
+| `/archive-batch` | Archive completed processing batches                               |
+| `/profile`       | Create, list, show, and activate domain profiles                   |
+| `/project`       | Register, update, and query research projects                      |
+| `/graph`         | Interactive knowledge graph analysis (health, triangles, bridges)  |
+| `/remember`      | Capture friction as methodology observations                       |
+| `/rethink`       | Challenge system assumptions against accumulated evidence          |
+| `/refactor`      | Plan vault restructuring from config changes                       |
+| `/tasks`         | View and manage the task stack and processing queue                |
+| `/dev`           | Code section health checks (tests, lint, build, coverage)          |
 
 See the [Skills Reference](docs/manual/skills.md) for full command
 documentation with arguments and I/O details.

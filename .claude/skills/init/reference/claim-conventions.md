@@ -81,6 +81,7 @@ Before creating a goal file, verify no file with the same name exists in notes/.
 - **No dangling links.** Verify every wiki-link target exists before writing.
 - **No truncated links.** Write the full title.
 - **No slash in titles.** Use `-` instead of `/`.
+- **Synthesis provenance boundary.** Synthesis claims (`source_class: synthesis`) must NOT assert specific empirical results, effect sizes, or dataset-specific findings. Frame as conditional propositions or methodological requirements. A synthesis claim that reads like an empirical finding is a provenance failure -- it has no source document to trace to.
 - **Compositional phases.** Phase 3 MUST reference specific Phase 2 claims by title. Phase 4 MUST link inversions to their parent orientation claims.
 - **Idempotent.** Running /init twice on the same goal should detect prior seeding and offer choices, not blindly duplicate.
 

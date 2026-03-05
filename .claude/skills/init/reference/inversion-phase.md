@@ -30,8 +30,12 @@ created: {today YYYY-MM-DD}
 ---
 ```
 
-Title pattern: a proposition that, if true, falsifies the parent claim.
+Title pattern: a *conditional* proposition that, if true, falsifies the parent claim. Inversions must be framed as falsification conditions ("if X were observed, then Y is falsified"), never as assertions of fact about unanalyzed data. An inversion that presupposes a specific empirical result has no source and violates source fidelity.
+
 Example: If orientation is "increased measurement variance predicts system failure before observable symptoms", the inversion might be "measurement variance increases reflect instrument degradation rather than meaningful change in the system under study".
+
+Bad: "cross-cohort reclassification rates in dataset X exceed acceptable thresholds" (asserts an empirical result without a source document).
+Good: "if cross-cohort reclassification rates exceeded acceptable thresholds it would demonstrate that single-cohort cutpoints do not generalize" (conditional falsification).
 
 Body: 2-3 sentences explaining how this inversion would be tested and what it would mean for the research program. MUST include an inline wiki-link to the parent orientation claim:
 
