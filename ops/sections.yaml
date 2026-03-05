@@ -110,26 +110,6 @@ sections:
     depends_on:
       - docs-templates
 
-  dashboard:
-    label: "Dashboard"
-    paths:
-      - _code/dashboard
-    checks:
-      - name: tests
-        cmd: "cd _code/dashboard && npx vitest run 2>&1"
-        pass_pattern: "passed"
-        fail_pattern: "FAILED|FAIL"
-      - name: build
-        cmd: "cd _code/dashboard && npm run build 2>&1"
-        pass_pattern: "built in"
-        fail_pattern: "error"
-      - name: typecheck
-        cmd: "cd _code/dashboard && npx tsc --noEmit 2>&1"
-        pass_pattern: "^$"
-        fail_pattern: "error TS"
-    depends_on:
-      - core-lib
-
   docs-templates:
     label: "Docs & Templates"
     paths:
