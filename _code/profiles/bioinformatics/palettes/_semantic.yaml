@@ -1,0 +1,15 @@
+# Cross-lab semantic palettes
+# Shared across all labs in the bioinformatics domain.
+# Lab-specific categorical palettes live in per-lab files.
+
+sex:
+  Male: "#377EB8"
+  Female: "#E41A1C"
+
+dx:
+  "P-": "#4DAF4A"
+  "P+": "#E41A1C"
+
+binary:
+  Control: "#4DAF4A"
+  Case: "#E41A1C"
