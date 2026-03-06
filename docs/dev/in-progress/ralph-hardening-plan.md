@@ -90,15 +90,17 @@ Fixes: #3, #5 (partial, complements Phase 1), #7
 
 ---
 
-### Phase 4: Observability (WS5) -- PENDING
+### Phase 4: Observability (WS5) -- DONE
 
 Fixes: #9, #10, #11
 
 Lower priority. No data-loss risk.
 
-1. **Topic map GC (#9):** New script `_code/scripts/maintenance/gc_topic_maps.py`. Diffs topic map wiki links against existing files. Reports dead links (does NOT auto-remove). Runnable manually or via `/health`.
+**Changes applied:**
 
-2. **Skill Tool fallback caching (#10):** SKILL.md instruction: after first Skill Tool fallback, cache the SKILL.md content in the lead session. Re-inject from cache for remaining iterations instead of re-reading.
+1. **Topic map GC (#9):** Created `_code/scripts/maintenance/gc_topic_maps.py`. Scans `type: moc` files in `notes/` for `[[wiki links]]`, checks each against disk and the stem index (handles accent/case/hyphen fuzzy matching). Reports dead links with line numbers. Flags: `--json` for `/health` integration, `--fix` to remove dead link lines (creates `.bak` backups). Does NOT auto-remove by default -- preserves intentional forward-references. Exit code 1 if dead links found (useful for CI).
+
+2. **Skill Tool fallback caching (#10):** Added step 2 to Recovery Procedure in SKILL.md: cache SKILL.md content in the lead session after first fallback read. One read per skill per session -- no redundant filesystem reads on subsequent iterations.
 
 3. **Queue query caching (#11):** Deferred. Current CLI is fast enough for queues under 1000 entries.
 

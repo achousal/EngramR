@@ -786,8 +786,9 @@ The Skill tool can intermittently fail with "Unknown skill" errors after ~6-7 in
 When a `/skill` invocation fails with "Unknown skill" or similar tool errors:
 
 1. **Read the SKILL.md directly** from the filesystem using the Read tool
-2. **Follow the instructions** in the SKILL.md as if the Skill tool had loaded them
-3. **Continue processing** -- do not abort the batch or retry the Skill tool
+2. **Cache the content** in the lead session for reuse in subsequent iterations. Do NOT re-read the same SKILL.md on every iteration -- one read per skill per session is sufficient.
+3. **Follow the instructions** in the SKILL.md as if the Skill tool had loaded them
+4. **Continue processing** -- do not abort the batch or retry the Skill tool
 
 ### Phase-to-Path Lookup
 
