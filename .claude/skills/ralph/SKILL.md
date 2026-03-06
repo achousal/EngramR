@@ -285,7 +285,7 @@ ONE PHASE ONLY. Do NOT run reflect.
 
 For **reflect** phase:
 
-**Build sibling list:** Query the queue for other claims in the same batch where `completed_phases` includes "create" (note already exists). Format as wiki links.
+**Build verified sibling list:** Query the queue for other claims in the same batch where `completed_phases` includes "create". For each sibling, verify the note exists on disk using `Glob` for `notes/{SIBLING_TARGET}.md`. Only include siblings whose notes actually exist. This prevents dangling wiki links caused by title rewrites or failed creates.
 
 ```
 Read the task file at ops/queue/{FILE} for context.
@@ -294,9 +294,10 @@ You are processing task {ID} from the work queue.
 Phase: reflect | Target: {TARGET}
 
 OTHER CLAIMS FROM THIS BATCH (check connections to these alongside regular discovery):
-{for each sibling in batch where completed_phases includes "create":}
+{for each sibling in batch where completed_phases includes "create"
+ AND note verified to exist on disk:}
 - [[{SIBLING_TARGET}]]
-{end for, or "None yet" if this is the first claim}
+{end for, or "None yet" if no verified siblings}
 
 Run /reflect --handoff on: {TARGET}
 Use dual discovery: topic map exploration AND semantic search.
@@ -307,7 +308,7 @@ ONE PHASE ONLY. Do NOT run reweave.
 
 For **reweave** phase:
 
-**Same sibling list** as reflect (re-query queue for freshest state):
+**Same verified sibling list** as reflect (re-query queue for freshest state, re-verify existence on disk):
 
 ```
 Read the task file at ops/queue/{FILE} for context.
@@ -316,7 +317,8 @@ You are processing task {ID} from the work queue.
 Phase: reweave | Target: {TARGET}
 
 OTHER CLAIMS FROM THIS BATCH:
-{for each sibling in batch where completed_phases includes "create":}
+{for each sibling in batch where completed_phases includes "create"
+ AND note verified to exist on disk:}
 - [[{SIBLING_TARGET}]]
 {end for}
 
@@ -383,6 +385,17 @@ When the subagent returns:
 ### 4e. Update Queue (Phase Progression)
 
 After evaluating the return, advance the task to the next phase.
+
+**Post-create target sync (MANDATORY after create phase):**
+
+The create subagent may sharpen or rewrite the proposed title to satisfy prose-as-title rules. The queue `target` field must match the actual filename on disk, or all downstream sibling links will dangle.
+
+After a **create** phase completes:
+1. Read the task file's `## Create` section. Parse the `Created: [[actual title]]` wiki link.
+2. If the actual title differs from the queue entry's `target`, update `target` in queue.json to match.
+3. Also verify the note exists on disk: `Glob` for `notes/{actual title}.md`. If missing, log a warning — the create phase may have failed silently.
+
+This sync ensures reflect, reweave, cross-connect, and verify all reference the real filename.
 
 **Phase progression logic:**
 
@@ -521,10 +534,12 @@ SIBLING CLAIMS IN THIS BATCH (link to these where genuine connections exist):
 - "{SIBLING_TARGET}" (task file: ops/queue/{SIBLING_FILE})
 {end for}
 
-During REFLECT and REWEAVE, check if your claim genuinely connects to any sibling.
-If a sibling claim exists in notes/, link to it inline where the
-connection is real. If it does not exist yet (still being created), skip —
-cross-connect will catch it after.
+During REFLECT and REWEAVE, verify each sibling note exists on disk (Glob for
+notes/{SIBLING_TARGET}.md) BEFORE linking to it. Queue targets may differ from
+actual filenames due to title sharpening during create. If a sibling note does
+not exist under its queue target name, check the sibling's task file ## Create
+section for the actual title. If it does not exist yet (still being created),
+skip — cross-connect will catch it after.
 
 Read the task file for full context. Execute phases from current_phase onwards.
 If completed_phases is not empty, skip those phases (resumption mode).
