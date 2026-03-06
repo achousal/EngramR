@@ -1,0 +1,25 @@
+{
+  "panel_id": "example_panel",
+  "title": "Example Biomarker Panel",
+  "description": "Template for a biomarker dashboard panel.",
+  "biomarkers": [
+    {
+      "name": "Marker A",
+      "unit": "pg/mL",
+      "transform": "log10",
+      "cutpoints": {
+        "low_upper": 0.04,
+        "hi_lower": 0.09
+      }
+    },
+    {
+      "name": "Marker B",
+      "unit": "pg/mL",
+      "transform": "none",
+      "cutpoints": {
+        "low_upper": 10,
+        "hi_lower": 25
+      }
+    }
+  ]
+}
