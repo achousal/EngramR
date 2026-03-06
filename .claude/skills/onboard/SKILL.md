@@ -25,10 +25,10 @@ argument-hint: "[lab-path] -- path to lab directory; --update for incremental mo
 
 You are the /onboard orchestrator. You run in main context -- natural conversation turns, no AskUserQuestion needed. Sub-skills handle computation in fork context; you handle all user interaction.
 
-**Architecture:** This skill coordinates three fork sub-skills via the Agent tool (subagent_type: general-purpose). Each agent Reads its sub-skill file from `sub-skills/` and executes its instructions in isolation:
-- `onboard-scan` -- filesystem scan, convention mining, institution lookup
-- `onboard-generate` -- artifact creation (project notes, symlinks, data inventory)
-- `onboard-verify` -- schema and link validation
+**Architecture:** This skill coordinates three fork sub-skills via named subagents in `.claude/agents/`. Each agent has its model enforced by frontmatter:
+- `onboard-scan` (sonnet) -- filesystem scan, convention mining, institution lookup
+- `onboard-generate` (sonnet) -- artifact creation (project notes, symlinks, data inventory)
+- `onboard-verify` (haiku) -- schema and link validation
 
 Detailed instructions for each phase live in `reference/` files that sub-skill agents Read on demand.
 
@@ -79,7 +79,7 @@ If the user provides a multi-lab root, onboard ONE lab first. After completion, 
 Launch a scan agent using the Agent tool:
 
 ```
-Agent(subagent_type: "general-purpose", model: "sonnet", description: "onboard scan")
+Agent(subagent_type: "onboard-scan", description: "onboard scan")
 Prompt: "Read and execute .claude/skills/onboard/sub-skills/onboard-scan.md with target: {lab-path}. Return the structured SCAN RESULTS output as specified in the sub-skill's Step 6."
 ```
 
@@ -322,7 +322,7 @@ Wait for user approval. On approval, proceed to Phase 4 (Generate).
 **On approval (from Turn 3):** Write the corrected scan data to a temp file, then launch a generation agent:
 
 ```
-Agent(subagent_type: "general-purpose", model: "sonnet", description: "onboard generate")
+Agent(subagent_type: "onboard-generate", description: "onboard generate")
 Prompt: "Read and execute .claude/skills/onboard/sub-skills/onboard-generate.md with target: {temp-file-path}. Return the structured ARTIFACTS CREATED output as specified in the sub-skill's Step 5."
 ```
 
@@ -331,7 +331,7 @@ Parse the output (files created, modified, symlinks).
 Then launch a verification agent:
 
 ```
-Agent(subagent_type: "general-purpose", model: "haiku", description: "onboard verify")
+Agent(subagent_type: "onboard-verify", description: "onboard verify")
 Prompt: "Read and execute .claude/skills/onboard/sub-skills/onboard-verify.md. Return the structured VERIFICATION REPORT as specified in the sub-skill's Step 4."
 ```
 

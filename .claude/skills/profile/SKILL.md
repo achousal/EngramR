@@ -23,11 +23,11 @@ argument-hint: "[--list | --show {name} | --activate {name}]"
 
 **Target: $ARGUMENTS**
 
-You are the /profile orchestrator. You run in main context -- natural conversation turns. Sub-skills handle computation in fork context via the Agent tool (subagent_type: general-purpose); you handle all user interaction.
+You are the /profile orchestrator. You run in main context -- natural conversation turns. Sub-skills handle computation in fork context via named subagents in `.claude/agents/`; you handle all user interaction.
 
-**Architecture:** This skill coordinates four fork sub-skills via the Agent tool:
-- `profile-suggest` -- web search for confounder/tool suggestions (haiku)
-- `profile-generate` -- write all profile YAML files (sonnet)
+**Architecture:** This skill coordinates four fork sub-skills via named subagents. Each agent has its model enforced by frontmatter:
+- `profile-suggest` (haiku, background) -- web search for confounder/tool suggestions
+- `profile-generate` (sonnet) -- write all profile YAML files
 - `profile-validate` -- run load_profile() validation (haiku)
 - `profile-query` -- handle --list and --show modes (haiku)
 
@@ -96,7 +96,7 @@ Launch the `profile-query` sub-skill:
 Read .claude/skills/profile/sub-skills/profile-query.md
 ```
 
-Then spawn an Agent (subagent_type: general-purpose, model: haiku) with prompt:
+Then spawn an Agent (subagent_type: profile-query) with prompt:
 ```
 Read and execute .claude/skills/profile/sub-skills/profile-query.md with arguments: --list
 ```
@@ -109,7 +109,7 @@ Present the returned list to the user. Done.
 
 Launch the `profile-query` sub-skill:
 
-Spawn an Agent (subagent_type: general-purpose, model: haiku) with prompt:
+Spawn an Agent (subagent_type: profile-query) with prompt:
 ```
 Read and execute .claude/skills/profile/sub-skills/profile-query.md with arguments: --show {name}
 ```
@@ -225,7 +225,7 @@ After user responds:
 1. Store: data_layers, file_extensions, tool_references
 2. Fire `profile-suggest` fork in background:
 
-Spawn an Agent (subagent_type: general-purpose, model: haiku, run_in_background: true) with prompt:
+Spawn an Agent (subagent_type: profile-suggest, run_in_background: true) with prompt:
 ```
 Read and execute .claude/skills/profile/sub-skills/profile-suggest.md with arguments:
 domain_name={profile_name} data_layers={comma-separated layers}
@@ -287,7 +287,7 @@ On "cancel": abort with message "Profile creation cancelled. No files were writt
 
 ### Step 1: Generate profile files
 
-Spawn an Agent (subagent_type: general-purpose, model: sonnet) with prompt:
+Spawn an Agent (subagent_type: profile-generate) with prompt:
 ```
 Read and execute .claude/skills/profile/sub-skills/profile-generate.md with the following data:
 name={profile_name}
@@ -312,7 +312,7 @@ semantic_palettes={semantic_palettes}
 
 ### Step 2: Validate
 
-Spawn an Agent (subagent_type: general-purpose, model: haiku) with prompt:
+Spawn an Agent (subagent_type: profile-validate) with prompt:
 ```
 Read and execute .claude/skills/profile/sub-skills/profile-validate.md with arguments: {profile_name}
 ```

@@ -24,10 +24,10 @@ argument-hint: "[goal-name] | --cycle | --handoff | --tutorial"
 
 You are the /init orchestrator. You run in main context -- natural conversation turns, no AskUserQuestion needed. Sub-skills handle computation in fork context; you handle all user interaction.
 
-**Architecture:** This skill coordinates three fork sub-skills via the Agent tool (subagent_type: general-purpose). Each agent Reads its sub-skill file from `sub-skills/` and executes its instructions in isolation:
-- `init-orient` -- reads vault state, produces structured summary
-- `init-generate` -- generates all claims (orientation, methodology, confounders, inversions)
-- `init-wire` -- wires claims into topic maps, project bridges, goal updates
+**Architecture:** This skill coordinates three fork sub-skills via named subagents in `.claude/agents/`. Each agent has its model enforced by frontmatter:
+- `init-orient` (haiku) -- reads vault state, produces structured summary
+- `init-generate` (sonnet) -- generates all claims (orientation, methodology, confounders, inversions)
+- `init-wire` (sonnet) -- wires claims into topic maps, project bridges, goal updates
 
 Detailed instructions for each phase live in `reference/` files that sub-skill agents Read on demand.
 
@@ -54,7 +54,7 @@ If `--cycle`, read `.claude/skills/init/reference/cycle-mode.md` and follow its 
 Launch an orient agent using the Agent tool:
 
 ```
-Agent(subagent_type: "general-purpose", model: "haiku", description: "init orient")
+Agent(subagent_type: "init-orient", description: "init orient")
 Prompt: "Read and execute .claude/skills/init/sub-skills/init-orient.md. Return the structured ORIENT RESULTS output as specified in the sub-skill."
 ```
 
@@ -308,7 +308,7 @@ Write input data to a temp file:
 Launch a generation agent:
 
 ```
-Agent(subagent_type: "general-purpose", model: "sonnet", description: "init generate")
+Agent(subagent_type: "init-generate", description: "init generate")
 Prompt: "Read and execute .claude/skills/init/sub-skills/init-generate.md with target: {temp-file-path}. Return the structured GENERATED CLAIMS output as specified in the sub-skill."
 ```
 
@@ -360,7 +360,7 @@ Wait for user response. Apply any edits/removals.
 Write this goal's approved claims list to a temp file (claims are now on disk). Launch a wiring agent:
 
 ```
-Agent(subagent_type: "general-purpose", model: "sonnet", description: "init wire")
+Agent(subagent_type: "init-wire", description: "init wire")
 Prompt: "Read and execute .claude/skills/init/sub-skills/init-wire.md with target: {temp-file-path}. Return the structured WIRING SUMMARY output as specified in the sub-skill."
 ```
 
