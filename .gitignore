@@ -86,11 +86,24 @@ ops/institutions/*.md
 ops/methodology/*.md
 !ops/methodology/.gitkeep
 
-# User project content
-projects/
+# User project content (root-level projects/ only)
+/projects/
 
-# User-specific style supplements (profile overrides only; template is tracked)
-profiles/*/styles/PLOT_DESIGN.md
+# User-specific profile content (*.example templates are tracked)
+# Lab palettes and identity
+_code/profiles/*/palettes/*.yaml
+!_code/profiles/*/palettes/_semantic.yaml
+!_code/profiles/*/palettes/*.yaml.example
+_code/profiles/*/styles/labs/*.md
+!_code/profiles/*/styles/labs/*.md.example
+# Project-specific overrides
+_code/profiles/*/styles/projects/*.md
+!_code/profiles/*/styles/projects/*.md.example
+# Dashboard panels and branding
+_code/profiles/*/panels/*.json
+!_code/profiles/*/panels/*.json.example
+_code/profiles/*/dashboard_config.yaml
+!_code/profiles/*/dashboard_config.yaml.example
 
 # Worktrees
 .claude/worktrees/

@@ -1,0 +1,27 @@
+# Project Name -- Plot Overrides
+
+Project-specific plot overrides for [project description]. Inherits from `styles/formats/static-plots.md` and `styles/labs/{lab}.md`.
+
+## Scatter Plots
+
+| Detail | Value | Rationale |
+|--------|-------|-----------|
+| Facet layout | `facet_wrap(~ Variable, ncol = 3)` | |
+| PDF dimensions | 14 x 8 in | |
+| Geom layers | `geom_smooth(lm)` + `geom_point()` | |
+
+## Box/Violin Overrides
+
+| Detail | Value | Rationale |
+|--------|-------|-----------|
+| Y-axis | `limits = c(0, NA)`, expand `c(0.05, 0.15)` | |
+| Jitter | alpha 0.6, size 1.5 | |
+
+## Output Dimensions
+
+| Plot type | Width x Height (in) | Layout |
+|-----------|---------------------|--------|
+| Main scatter | 14 x 8 | 2x3 grid |
+| Box/violin | 8 x 6 | -- |
+
+All outputs saved as PDF. Primary output directory: `results/{project}/`
