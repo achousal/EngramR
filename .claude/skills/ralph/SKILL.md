@@ -96,82 +96,60 @@ Turn budgets are circuit breakers, not throttles. A bounded phase hitting its ca
 
 ## Step 1: Read Queue State
 
-**1a. Queue file** — check these locations in order:
-1. `ops/queue.yaml`
-2. `ops/queue/queue.yaml`
-3. `ops/queue/queue.json`
+Use the queue query CLI to read queue state. This avoids shell escaping issues with inline Python.
 
-Parse the queue. Identify ALL pending tasks.
+**Stats:**
+```bash
+cd _code && uv run python -m engram_r.queue_query "$VAULT_PATH" stats
+```
+Returns JSON: `total`, `by_status`, `pending_by_phase`, `by_phase`.
 
-**Queue structure (v2 schema):**
+**Actionable tasks** (with phase gate, batch grouping, pipeline ordering built in):
+```bash
+cd _code && uv run python -m engram_r.queue_query "$VAULT_PATH" actionable [--limit N] [--type PHASE] [--batch ID]
+```
+Returns JSON: `actionable` (task list), `actionable_count`, `blocked` (phase gate results).
 
-The queue uses `current_phase` and `completed_phases` per task entry:
+**Task details with siblings** (for building subagent prompts):
+```bash
+cd _code && uv run python -m engram_r.queue_query "$VAULT_PATH" tasks --limit N --siblings [--type PHASE] [--batch ID]
+```
+Returns JSON: `tasks` (with full metadata + sibling list per task), `count`, `blocked`.
 
-```yaml
-phase_order:
-  claim: [create, reflect, reweave, verify]
-  enrichment: [enrich, reflect, reweave, verify]
-
-tasks:
-  - id: source-name
-    type: extract
-    status: pending
-    source: ops/queue/archive/2026-01-30-source/source.md
-    file: source-name.md
-    created: "2026-01-30T10:00:00Z"
-
-  - id: claim-010
-    type: claim
-    status: pending
-    target: "claim title here"
-    batch: source-name
-    file: source-name-010.md
-    current_phase: reflect
-    completed_phases: [create]
+**Siblings for a single task:**
+```bash
+cd _code && uv run python -m engram_r.queue_query "$VAULT_PATH" siblings TASK_ID
 ```
 
-If the queue file does not exist or is empty, report: "Queue is empty. Use /seed to add sources."
+If the queue file does not exist, the CLI exits with an error. Report: "Queue is empty. Use /seed to add sources."
+
+Set `VAULT_PATH` once at the start: `VAULT_PATH="$(pwd)"` (from vault root).
 
 ## Step 2: Filter Tasks
 
-Build a list of **actionable tasks** — tasks where `status == "pending"`. Order by PIPELINE_ORDER (reduce < create < enrich < reflect < reweave < verify), then by position in the tasks array within the same phase.
+The queue query CLI handles filtering, phase eligibility gating, and batch grouping automatically. The `--type` and `--batch` flags map directly to user arguments. The phase gate enforces:
 
-Apply filters:
-- If `--batch` specified: keep only tasks where `batch` matches
-- If `--type` specified: keep only tasks where `current_phase` matches (e.g., `--type reflect` finds tasks whose `current_phase` is "reflect")
+- If **any** tasks pending at `create` or `enrich`: `reflect` and `reweave` are blocked.
+- If **any** tasks pending at `reflect`: `reweave` is blocked.
+- `reduce` and `verify` are never blocked.
 
-**Phase Eligibility Gate (after user filters, before batch grouping):**
+The CLI returns blocked tasks separately with reasons. Use the `actionable` or `tasks` subcommand output directly -- do NOT re-implement filtering in ad-hoc Python or shell.
 
-Enforce phase ordering across all pending tasks. Later phases cannot run while earlier phases have pending work, because later phases depend on the graph state produced by earlier phases.
-
-1. Count pending tasks by `current_phase` across the **full queue** (not just the user-filtered subset -- the gate considers global queue state).
-2. Apply blocking rules:
-   - If **any** tasks are pending at `create` or `enrich`: **exclude** tasks at `reflect` and `reweave` from the actionable list.
-   - If **any** tasks are pending at `reflect`: **exclude** tasks at `reweave` from the actionable list.
-3. `reduce` and `verify` tasks are **never blocked** by this gate. Reduce (which processes extract-type tasks) is upstream of everything; verify is a quality check that does not create new connections.
-4. Remove ineligible tasks from the actionable list.
-
-Do NOT display verbose phase gate messages here. Gate results are folded into the compact overview in Step 3.
-
-If the gate removes ALL actionable tasks, Step 3 will show the blockage and suggest processing the earlier phase.
-
-**Batch Grouping (after filtering):**
-
-After filtering, sort actionable tasks so tasks from the same batch appear consecutively:
-1. Collect unique batch values in order of first appearance.
-2. Group tasks by batch, preserving original order within each group.
-3. Tasks with no batch field retain original relative order, placed at end.
-4. Flatten into final ordered list.
-
-This changes only order, not which tasks are processed. When `--batch` is set, this is a no-op (all tasks share the same batch already).
-
-The `phase_order` header defines the phase sequence:
+The `phase_order` defines the phase sequence:
 - `claim`: create -> reflect -> reweave -> verify
 - `enrichment`: enrich -> reflect -> reweave -> verify
 
 ## Step 3: Queue Overview
 
-**Canonical pipeline order** (all display components use this):
+Build the overview from CLI output. Run both commands:
+```bash
+VAULT_PATH="$(pwd)"
+cd _code
+STATS=$(uv run python -m engram_r.queue_query "$VAULT_PATH" stats)
+ACTIONABLE=$(uv run python -m engram_r.queue_query "$VAULT_PATH" actionable --limit 8)
+```
+
+Parse the JSON to construct the display. **Canonical pipeline order** for display:
 ```
 PIPELINE_ORDER = [reduce, create, enrich, reflect, reweave, verify]
 ```
@@ -240,6 +218,13 @@ File: {file}
 ```
 
 ### 4b. Build Subagent Prompt
+
+Use the CLI to get task details with siblings for the current batch of tasks:
+```bash
+cd _code && uv run python -m engram_r.queue_query "$VAULT_PATH" tasks --limit N --siblings [--type PHASE] [--batch ID]
+```
+
+Parse the JSON output. Each task entry includes `id`, `type`, `target`, `batch`, `file`, `current_phase`, `completed_phases`, `source_detail`, and `siblings` (list of sibling tasks with their targets).
 
 Construct a prompt based on `current_phase`. Every prompt MUST include:
 - Reference to the task file path (from queue's `file` field)
