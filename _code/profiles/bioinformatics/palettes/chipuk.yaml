@@ -1,0 +1,17 @@
+# Chipuk Lab -- categorical palette and accent colors
+# Okabe-Ito (8 colors), designed for universal colorblind accessibility
+
+accent:
+  primary: "#0072B2"    # blue
+  secondary: "#E69F00"  # orange
+  tertiary: "#009E73"   # bluish green
+
+categorical:
+  - "#E69F00"
+  - "#56B4E9"
+  - "#009E73"
+  - "#F0E442"
+  - "#0072B2"
+  - "#D55E00"
+  - "#CC79A7"
+  - "#000000"
