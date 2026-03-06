@@ -308,7 +308,11 @@ ONE PHASE ONLY. Do NOT run reflect.
 
 For **enrich** phase:
 
-**Pre-dispatch validation:** Before spawning the subagent, verify the target note exists on disk using `Glob` with `notes/**/[TARGET]*`. If the target note does not exist, do NOT dispatch the enrichment. Instead, mark the task as blocked with a note: `"blocked": "target note does not exist"`. Report it in the summary as a blocked task. This prevents wasted subagent work on phantom targets created by reduce-phase hallucination.
+**Pre-dispatch validation:** Before spawning the subagent, verify the target note exists on disk using exact match: `Glob` with `notes/[TARGET].md`. If no match, try case-insensitive exact match: `Glob` with `notes/[target].md` (lowercased). **Never use prefix globs** (`notes/**/[TARGET]*`) -- prefix matching can hit unrelated notes that share a common prefix, causing enrichment of the wrong claim. If neither exact nor case-insensitive match finds the note, do NOT dispatch the enrichment. Instead, mark the task as **failed** using the CLI:
+```bash
+cd _code && uv run python -m engram_r.queue_query "$VAULT_PATH" fail TASK_ID --reason "enrich target not found on disk: [TARGET]"
+```
+Report it in the summary as a failed task. This prevents wasted subagent work on phantom targets created by reduce-phase hallucination.
 
 ```
 Read the task file at ops/queue/{FILE} for context.
@@ -423,7 +427,8 @@ When the subagent returns:
    ```
    Report the failure and continue to the next task. Do NOT advance the phase.
 4. **If handoff missing BUT task file section is filled:** Log a warning but continue — the work was completed, just the handoff was missed.
-5. **Capture learnings:** If Learnings section has non-NONE entries, note them for the final report
+5. **Partial-fill inconsistency check:** If handoff IS present AND task file section IS filled, compare the note title reported in the handoff with the title recorded in the task file section. If they differ, log a warning: `"Title mismatch: handoff reports '[X]' but task file records '[Y]' — using handoff title for target sync"`. The handoff title takes precedence (it reflects the actual file on disk).
+6. **Capture learnings:** If Learnings section has non-NONE entries, note them for the final report
 
 ### 4e. Update Queue (Phase Progression)
 
@@ -593,11 +598,13 @@ not exist under its queue target name, check the sibling's task file ## Create
 section for the actual title. If it does not exist yet (still being created),
 skip — cross-connect will catch it after.
 
-Read the task file for full context. Execute phases from current_phase onwards.
-If completed_phases is not empty, skip those phases (resumption mode).
+Read the task file for full context. Execute the current phase ONLY.
 
-When complete, update the queue entry to status "done" and report the created
-claim title, path, and claim ID. The lead needs this for cross-connect.
+Do NOT write to queue.json. The lead handles all queue mutations.
+When complete, report in your RALPH HANDOFF block:
+- The actual note title and path (may differ from queue target after title sharpening)
+- The claim ID
+- Whether the phase succeeded or failed, with reason if failed
 ```
 
 Spawn via Agent tool using the named agent for the claim's current phase. For claims starting at `create`, use `ralph-create`. The parallel worker processes one phase, returns, and the orchestrator advances to the next phase and spawns the next named agent.
@@ -614,27 +621,40 @@ Agent(
 
 **Spawn workers in PARALLEL** — launch all Agent tool calls in a single message, not sequentially.
 
-### 6c. Monitor Workers (Phase A)
+### 6c. Monitor Workers + Lead Queue Updates (Phase A)
 
-Wait for worker completions. As workers complete:
+Wait for worker completions. Workers do NOT write to queue.json -- the lead does ALL queue mutations.
 
-1. **Parse completion message** — extract the created note title and path (needed for Phase B)
-2. **Log any learnings** from the worker's report
-3. **Check for issues** — failures, skipped phases, resource conflicts
+As each worker completes:
 
-**Collect all created notes** — maintain a list of `{note_title, note_path}` from worker completion messages. You need this for the cross-connect validation phase.
+1. **Parse RALPH HANDOFF block** — extract the actual note title/path and success/failure status
+2. **Advance queue (lead only):**
+   - If worker succeeded: advance the task to its next phase using the CLI:
+     ```bash
+     cd _code && uv run python -m engram_r.queue_query "$VAULT_PATH" advance TASK_ID
+     ```
+   - If worker failed or returned without handoff AND empty task file section: mark failed:
+     ```bash
+     cd _code && uv run python -m engram_r.queue_query "$VAULT_PATH" fail TASK_ID --reason "parallel worker failed: {reason}"
+     ```
+   - If create phase: run post-create target sync (same as serial Step 4e)
+   - If reweave phase: run post-reweave target sync (same as serial Step 4e)
+3. **If task has more phases remaining:** Spawn the next phase's named agent for this claim (sequential per claim, parallel across claims). The lead re-dispatches after each phase completes.
+4. **Log any learnings** from the worker's report
 
-**Completion gate:** Phase B CANNOT start until ALL spawned workers have reported back (either success or error). Track completions:
+**Collect all created notes** — maintain a list of `{actual_note_title, note_path}` from worker HANDOFF blocks (NOT from queue targets, which may be stale after title sharpening). This list feeds Phase B cross-connect.
+
+**Completion gate:** Phase B CANNOT start until ALL claims have finished ALL their phases (or been marked failed). Track completions:
 
 ```
 Workers spawned: {total_spawned}
-Workers completed: {completion_count}
-Workers with errors: {error_count}
+Claims fully processed: {done_count}
+Claims failed: {failed_count}
 
-Phase B ready: {completion_count + error_count == total_spawned}
+Phase B ready: {done_count + failed_count == total_claims}
 ```
 
-Do NOT proceed to Phase B while any worker is still running.
+Do NOT proceed to Phase B while any claim still has pending phases.
 
 ### 6d. Cross-Connect Validation (Phase B)
 

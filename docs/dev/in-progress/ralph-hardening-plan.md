@@ -58,38 +58,35 @@ Fixes: #4, #5, #6, #12, #13
 
 ---
 
-### Phase 2: Queue Write Safety (WS2) -- PENDING
+### Phase 2: Queue Write Safety (WS2) -- DONE
 
 Fixes: #1
 
 **Problem:** In --parallel mode, worker subagents may write queue.json directly (line 557 says "update the queue entry to status done"). The lead ALSO writes queue.json. Race condition: last write wins.
 
-**Changes:**
-1. SKILL.md 6b: Remove "update the queue entry to status done" from parallel worker prompt. Replace with: "Report your completion in the RALPH HANDOFF block. Do NOT write to queue.json."
-2. SKILL.md 6c: After each worker returns, lead parses handoff and advances queue entry. All queue writes serialized through the lead.
-3. (Optional) Atomic write helper already shipped in Phase 1 (`write_queue_atomic`).
-
-**Scope:** ~30 lines of SKILL.md changes. No new Python code needed (atomic write already exists).
+**Changes applied:**
+1. SKILL.md 6b: Removed "update the queue entry to status done" from worker prompt. Workers now report completion in RALPH HANDOFF block only. Explicit "Do NOT write to queue.json" instruction added.
+2. SKILL.md 6c: Renamed to "Monitor Workers + Lead Queue Updates." Lead now handles ALL queue mutations after each worker returns -- advance via CLI on success, fail via CLI on error. Lead also runs post-create target sync and re-dispatches next phases.
+3. Cross-connect note list now sourced from worker HANDOFF blocks (actual filenames) instead of queue targets (which may be stale after title sharpening). This also fixes #7.
+4. Atomic write (`write_queue_atomic`) already shipped in Phase 1.
 
 ---
 
-### Phase 3: Target Identity Integrity (WS3) -- PENDING
+### Phase 3: Target Identity Integrity (WS3) -- DONE
 
 Fixes: #3, #5 (partial, complements Phase 1), #7
 
 **Problem:** Title drift across phases causes downstream operations to target wrong files. Multiple manifestations.
 
-**Changes:**
+**Changes applied:**
 
-1. **Enrich pre-dispatch (SKILL.md line 273):** Change from `notes/**/[TARGET]*` (prefix glob) to exact match `notes/[TARGET].md`. Fallback to case-insensitive exact match. Never prefix-glob.
+1. **Enrich pre-dispatch (SKILL.md line 311):** Replaced `notes/**/[TARGET]*` prefix glob with exact match `notes/[TARGET].md` + case-insensitive fallback. Explicit "Never use prefix globs" instruction. Failure now marks task `failed` via CLI (not just "blocked") for consistency with Phase 1's error model.
 
-2. **Post-phase target verification (generalized):** After ANY phase that can rename (create, reweave), verify actual filename on disk matches queue target. Already exists for create/reweave in 4e. Formalize as mandatory subroutine for both serial and parallel paths.
+2. **Post-phase target verification (parallel 6c):** Added post-reweave target sync to parallel path (6c already had post-create from Phase 2). Both serial (4e) and parallel (6c) now run target sync after create AND reweave.
 
-3. **Parallel 6c:** When parsing worker completion, extract actual note filename from handoff block, not the queue target. Use handoff-sourced filenames for cross-connect note list.
+3. **Parallel 6c handoff-sourced filenames:** Already completed in Phase 2 (line 639). No additional changes needed.
 
-4. **Turn budget exhaustion (complement to Phase 1):** Phase 1 marks failed when empty. Phase 3 adds: if task file section is partially filled but inconsistent with handoff, log warning with specifics.
-
-**Scope:** ~30 lines of SKILL.md prompt changes.
+4. **Partial-fill inconsistency (4d):** Added step 5 to Evaluate Return: when handoff AND task file section are both present but report different note titles, log a warning with both titles. Handoff title takes precedence for target sync (it reflects the actual file on disk).
 
 ---
 
@@ -112,11 +109,11 @@ Lower priority. No data-loss risk.
 | Priority | Issue | Fix complexity |
 |----------|-------|---------------|
 | 1 | #4 Phase gate deadlock (no failed state) | Medium -- DONE |
-| 2 | #1 Parallel queue.json write collision | Medium -- PENDING |
+| 2 | #1 Parallel queue.json write collision | Medium -- DONE |
 | 3 | #5 Turn budget exhaustion leaves partial state | Low -- DONE |
 | 4 | #12 No idempotency guard | Low -- DONE |
-| 5 | #3 Enrich glob too greedy | Low -- PENDING |
-| 6 | #7 Parallel title rewrite in cross-connect | Low -- PENDING |
+| 5 | #3 Enrich glob too greedy | Low -- DONE |
+| 6 | #7 Parallel title rewrite in cross-connect | Low -- DONE |
 
 ## Design Decisions
 
