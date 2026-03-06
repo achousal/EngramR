@@ -105,12 +105,62 @@ def load_profile(name: str, code_dir: Path | None = None) -> DomainProfile:
             pii_data = yaml.safe_load(f) or {}
             profile.pii_patterns = pii_data.get("column_patterns", [])
 
+    profile.palettes = _load_palettes(profile_dir)
+
+    return profile
+
+
+def _load_palettes(profile_dir: Path) -> dict[str, Any]:
+    """Load palettes from palettes/ directory or flat palettes.yaml.
+
+    The palettes/ directory structure uses per-lab YAML files and a
+    _semantic.yaml for cross-lab semantic mappings. The assembled dict
+    matches the flat-file format: {"labs": {...}, "semantic": {...}}.
+
+    Falls back to palettes.yaml for backward compatibility.
+    """
+    palettes_dir = profile_dir / "palettes"
+    if palettes_dir.is_dir():
+        return _load_palettes_from_dir(palettes_dir)
+
     palettes_path = profile_dir / "palettes.yaml"
     if palettes_path.exists():
         with open(palettes_path) as f:
-            profile.palettes = yaml.safe_load(f) or {}
+            return yaml.safe_load(f) or {}
 
-    return profile
+    return {}
+
+
+def _load_palettes_from_dir(palettes_dir: Path) -> dict[str, Any]:
+    """Assemble palettes from per-file directory structure.
+
+    Reads _semantic.yaml for cross-lab semantic mappings and each
+    {lab}.yaml for lab-specific categorical palettes. Produces the
+    same dict shape as the legacy flat palettes.yaml.
+    """
+    result: dict[str, Any] = {}
+
+    # Load semantic mappings
+    semantic_path = palettes_dir / "_semantic.yaml"
+    if semantic_path.exists():
+        with open(semantic_path) as f:
+            result["semantic"] = yaml.safe_load(f) or {}
+
+    # Load per-lab palettes
+    labs: dict[str, list[str]] = {}
+    for lab_file in sorted(palettes_dir.glob("*.yaml")):
+        if lab_file.name.startswith("_"):
+            continue
+        with open(lab_file) as f:
+            lab_data = yaml.safe_load(f) or {}
+        lab_name = lab_file.stem
+        if "categorical" in lab_data:
+            labs[lab_name] = lab_data["categorical"]
+
+    if labs:
+        result["labs"] = labs
+
+    return result
 
 
 def get_active_profile(
