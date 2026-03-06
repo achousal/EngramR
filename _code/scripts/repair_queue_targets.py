@@ -23,7 +23,12 @@ NOTES_DIR = VAULT / "notes"
 
 
 def extract_created_title(task_file: Path) -> str | None:
-    """Parse 'Created: [[actual title]]' from task file's ## Create section."""
+    """Parse actual created title from task file's ## Create section.
+
+    Handles two formats:
+      Created: [[actual title]]
+      Created: notes/actual title.md
+    """
     if not task_file.exists():
         return None
     content = task_file.read_text()
@@ -31,10 +36,18 @@ def extract_created_title(task_file: Path) -> str | None:
     if not match:
         return None
     create_section = match.group(1)
+
+    # Format 1: wiki link
     link_match = re.search(r"Created:\s*\[\[(.+?)\]\]", create_section)
-    if not link_match:
-        return None
-    return link_match.group(1)
+    if link_match:
+        return link_match.group(1)
+
+    # Format 2: file path
+    path_match = re.search(r"Created:\s*notes/(.+?)\.md", create_section)
+    if path_match:
+        return path_match.group(1)
+
+    return None
 
 
 def main() -> None:
@@ -66,6 +79,8 @@ def main() -> None:
             if not note_exists:
                 print(f"PHANTOM  {task['id']}: no Create section and no note on disk")
                 phantoms += 1
+            else:
+                already_correct += 1  # note exists under queue target, no rewrite detected
             continue
 
         note_path = NOTES_DIR / f"{actual_title}.md"
@@ -91,13 +106,39 @@ def main() -> None:
     print(f"Synced:              {synced}")
     print(f"Phantoms:            {phantoms}")
 
-    if not dry_run and synced > 0:
+    if "--reset-phantoms" in sys.argv and not dry_run:
+        reset_count = 0
+        for idx, task in done_claims:
+            task_file_path = VAULT / "ops" / "queue" / task["file"]
+            actual = extract_created_title(task_file_path)
+            old = task["target"]
+            note_on_disk = (
+                (NOTES_DIR / f"{actual}.md").exists()
+                if actual
+                else (NOTES_DIR / f"{old}.md").exists()
+            )
+            if not note_on_disk:
+                queue[idx]["status"] = "pending"
+                queue[idx]["current_phase"] = "create"
+                queue[idx]["completed_phases"] = [
+                    p
+                    for p in queue[idx].get("completed_phases", [])
+                    if p not in ("create", "reflect", "reweave", "verify")
+                ]
+                queue[idx].pop("completed", None)
+                reset_count += 1
+        if reset_count:
+            print(f"\nReset {reset_count} phantom tasks to pending/create.")
+
+    if not dry_run and (synced > 0 or "--reset-phantoms" in sys.argv):
         with open(QUEUE_PATH, "w") as f:
             json.dump(queue, f, indent=2, ensure_ascii=False)
             f.write("\n")
-        print(f"\nqueue.json updated with {synced} target corrections.")
+        print(f"queue.json updated.")
     elif dry_run:
-        print(f"\n[dry-run] No changes written. Remove --dry-run to apply.")
+        print(f"\n[dry-run] No changes written.")
+        print(f"  Remove --dry-run to apply target sync.")
+        print(f"  Add --reset-phantoms to also reset phantom tasks to pending/create.")
 
 
 if __name__ == "__main__":
