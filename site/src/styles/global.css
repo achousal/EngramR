@@ -624,3 +624,13 @@ code, pre {
 .scaling-arrow::after {
   content: "\2192";
 }
+
+/* ---- HowItWorks card highlight from cycle diagram ---- */
+
+.how-card-highlight {
+  border-color: var(--color-accent-dim) !important;
+  box-shadow:
+    0 0 16px color-mix(in srgb, var(--color-accent) 15%, transparent),
+    0 2px 8px rgba(0, 0, 0, 0.25);
+  transition: border-color 0.2s, box-shadow 0.2s;
+}
