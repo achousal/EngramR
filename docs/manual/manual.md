@@ -2,6 +2,7 @@
 description: "Hub page for the vault user manual -- links to all reference pages"
 type: manual
 created: 2026-02-21
+updated: 2026-03-07
 ---
 
 # User Manual
@@ -15,49 +16,62 @@ Both layers share the same three-space architecture (self/, notes/, ops/) and wi
 
 ---
 
-## Manual Pages
+## Reading Order
 
-### [Getting Started](getting-started.md)
-First session guide. Creating your first claim, finding connections, understanding the session rhythm (orient-work-persist), and routing content through the processing pipeline.
+Start here, then branch based on what you need.
 
-### [Skills Reference](skills.md)
-Complete command reference for all vault skills, grouped by category. Includes invocation syntax, arguments, and vault I/O for every command.
+```
+Getting Started (first session, claims, session rhythm)
+    |
+    +-- Skills Reference (command reference for all skills)
+    |       |
+    |       +-- Workflows (pipeline, co-scientist loop, batch processing)
+    |
+    +-- Architecture (knowledge layer, hypothesis layer, Elo system)
+    |
+    +-- Configuration (ops/config.yaml, dimensions, domain profiles)
+```
 
-### [Workflows](workflows.md)
-Processing pipeline (capture-reduce-reflect-reweave-verify), maintenance cycle, session rhythm, batch processing, and the co-scientist generate-debate-evolve loop. How the pieces compose into daily and weekly work patterns.
+From there, pick what applies:
 
-### [Configuration](configuration.md)
-Structure and semantics of ops/config.yaml, the derivation manifest, dimension positions, processing depth and chaining modes, and how to use /architect to restructure the system.
+| Need | Page |
+| --- | --- |
+| Search PubMed, arXiv, Semantic Scholar | [Literature Search](literature.md) |
+| Publication-quality figures | [Plot System](plotting.md) |
+| Slack, Obsidian, MCP servers, daemon | [Integrations](integrations.md) |
+| Autonomous daemon, hooks, scripts | [Administration](administration.md) |
+| Multi-lab federation | [Inter-Lab Collaboration](inter-lab.md) |
+| Write validation, tamper detection, PII | [Security and Integrity](security.md) |
+| ripgrep query patterns | [Querying](querying.md) |
+| /ask, /architect, /rethink, /remember | [Meta-Skills](meta-skills.md) |
+| Diagnosing problems | [Troubleshooting](troubleshooting.md) |
 
-### [Meta-Skills](meta-skills.md)
-Deep guide to the introspective commands: /ask (query the methodology knowledge base), /architect (restructure system design), /rethink (triage observations and tensions), /remember (capture friction signals).
+---
 
-### [Querying](querying.md)
-YAML frontmatter query patterns -- using ripgrep to treat the vault as a database. Field-level, cross-field, backlink, co-scientist, and audit queries with practical examples.
+## All Pages
 
-### [Troubleshooting](troubleshooting.md)
-Diagnosis and resolution procedures for orphan claims, dangling links, stale content, methodology drift, inbox overflow, schema violations, and other common failure modes.
+### Core
 
-### [Inter-Lab Collaboration](inter-lab.md)
-Patterns for federated vaults, cross-lab claim sharing, conflict resolution, and provenance preservation across research groups.
+- **[Getting Started](getting-started.md)** -- First session guide. Onboarding, session rhythm, creating and connecting claims.
+- **[Skills Reference](skills.md)** -- Complete command reference, grouped by category. Invocation syntax, arguments, vault I/O.
+- **[Workflows](workflows.md)** -- Processing pipeline, co-scientist loop, session rhythm, maintenance cycle, batch processing.
+- **[Architecture](architecture.md)** -- Knowledge layer, hypothesis layer, Elo rating system, entity lifecycles, federated Elo.
+- **[Configuration](configuration.md)** -- ops/config.yaml structure, dimension semantics, processing modes, domain profiles, /architect.
 
-### [Architecture](architecture.md)
-Knowledge layer, hypothesis layer, Elo rating system, entity lifecycles (goals, hypotheses, projects), and federated Elo.
+### Reference
 
-### [Literature Search](literature.md)
-Search backends (PubMed, arXiv, Semantic Scholar, OpenAlex), enrichment pipeline (CrossRef, Unpaywall), and the unified search interface.
+- **[Literature Search](literature.md)** -- Search backends (PubMed, arXiv, Semantic Scholar, OpenAlex), enrichment pipeline, unified interface.
+- **[Plot System](plotting.md)** -- Visual identity, statistical decision tree, 8 plot builders, semantic palettes, figure sizes.
+- **[Querying](querying.md)** -- YAML frontmatter query patterns using ripgrep. Field-level, cross-field, backlink, and audit queries.
+- **[Meta-Skills](meta-skills.md)** -- Introspective commands: /ask, /architect, /rethink, /remember. The self-evolution cycle.
 
-### [Plot System](plotting.md)
-Three-tier visual hierarchy, statistical decision tree, 8 plot builders, semantic palettes, and standard figure sizes.
+### Operations
 
-### [Security and Integrity](security.md)
-Write-time validation (8 gates), tamper detection (SHA-256 manifest), PII filtering, and escalation ceilings.
-
-### [Integrations](integrations.md)
-Slack (notifications, interactive bot, scheduled DMs), Obsidian, MCP servers, and domain profiles.
-
-### [Administration](administration.md)
-Research loop daemon (priority cascade, metabolic indicators, model assignment), hooks, decision engine, code section health, and helper scripts.
+- **[Integrations](integrations.md)** -- Slack, Obsidian, MCP servers, research daemon, multi-vault. Setup and configuration.
+- **[Administration](administration.md)** -- Research loop daemon, hooks, decision engine, code section health, helper scripts.
+- **[Security and Integrity](security.md)** -- Write-time validation (8 gates), tamper detection (SHA-256), PII filtering, escalation ceilings.
+- **[Inter-Lab Collaboration](inter-lab.md)** -- Federation, multi-vault operations, trust model, cross-lab claim exchange.
+- **[Troubleshooting](troubleshooting.md)** -- Diagnosis and resolution for orphan claims, dangling links, stale content, schema violations.
 
 ---
 
@@ -68,7 +82,7 @@ Research loop daemon (priority cascade, metabolic indicators, model assignment),
 | Space | Directory | Purpose |
 |-------|-----------|---------|
 | Identity | self/ | Agent identity, epistemic stance, goals, methodology |
-| Notes | notes/, _research/hypotheses/, _research/literature/, _research/experiments/ | Research content -- the vault's core data |
+| Notes | notes/, _research/ | Research content -- claims, hypotheses, literature, experiments |
 | Operational | ops/ | Config, sessions, observations, tensions, queue |
 
 ### Processing Layers
@@ -76,22 +90,22 @@ Research loop daemon (priority cascade, metabolic indicators, model assignment),
 | Layer | Entry Point | Pipeline | State |
 |-------|-------------|----------|-------|
 | Arscontexta | inbox/ | capture - reduce - reflect - reweave - verify | notes/, ops/queue/ |
-| Co-scientist | /research | generate - review - tournament - evolve - meta-review | _research/hypotheses/, _research/ |
+| Co-scientist | /research | generate - review - tournament - evolve - meta-review | _research/ |
 
 ### Session Lifecycle
 
-Every session follows orient - work - persist. Hooks fire automatically at session boundaries: session-orient.sh reads vault state at start; session-capture.sh records the session at end. See [Workflows](workflows.md) for full details.
+Every session follows orient - work - persist. Hooks fire automatically at session boundaries. See [Workflows](workflows.md) for full details.
 
 ### Maintenance Model
 
-Condition-based, not calendar-based. Maintenance triggers fire when thresholds are met (orphan claims detected, 10+ pending observations, 5+ pending tensions, inbox items older than 3 days). See [Troubleshooting](troubleshooting.md) for the full condition table.
+Condition-based, not calendar-based. Triggers fire when thresholds are met (orphan claims, 10+ observations, 5+ tensions, inbox items older than 3 days). See [Troubleshooting](troubleshooting.md) for the full condition table.
 
 ---
 
-## Conventions Used in This Manual
+## Conventions
 
-- **Claim** refers to an atomic knowledge note in notes/, titled as a prose proposition.
-- **Topic map** refers to a navigation hub that organizes claims by topic.
-- **Wiki link** refers to `[[claim title]]` syntax used to connect claims.
-- All slash commands use bare names (e.g., /reduce, /research, /generate) -- no prefix needed.
-- All file paths are relative to the vault root unless stated otherwise.
+- **Claim** -- an atomic knowledge note in notes/, titled as a prose proposition.
+- **Topic map** -- a navigation hub that organizes claims by topic.
+- **Wiki link** -- `[[claim title]]` syntax used to connect claims.
+- Slash commands use bare names (e.g., /reduce, /research) -- no prefix needed.
+- File paths are relative to the vault root unless stated otherwise.
