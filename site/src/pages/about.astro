@@ -12,6 +12,25 @@ const base = import.meta.env.BASE_URL;
     <article class="doc-prose">
       <h1>Engram Reactor</h1>
 
+      <!-- Who is this for? callout -->
+      <div class="not-prose mb-8 p-5 rounded-lg border border-accent-dim bg-surface card-shadow">
+        <h3 class="font-display font-semibold text-text mb-3 text-sm uppercase tracking-wider">Who is this for?</h3>
+        <ul class="space-y-1.5 text-sm text-text-muted">
+          <li class="flex items-start gap-2">
+            <span class="text-accent-dim mt-0.5 shrink-0">--</span>
+            <span><strong class="text-text">Researchers</strong> who want to accumulate evidence and surface testable hypotheses</span>
+          </li>
+          <li class="flex items-start gap-2">
+            <span class="text-accent-dim mt-0.5 shrink-0">--</span>
+            <span><strong class="text-text">PIs</strong> who want to allocate resources based on ranked evidence, not intuition alone</span>
+          </li>
+          <li class="flex items-start gap-2">
+            <span class="text-accent-dim mt-0.5 shrink-0">--</span>
+            <span><strong class="text-text">Developers</strong> who want to extend the knowledge processing pipeline</span>
+          </li>
+        </ul>
+      </div>
+
       <h2 id="the-problem">The problem is not ideas. It is visibility.</h2>
 
       <p>
@@ -45,7 +64,7 @@ const base = import.meta.env.BASE_URL;
         </p>
       </blockquote>
 
-      <hr />
+      <hr class="about-divider" />
 
       <p>
         Two capabilities make this possible: a knowledge architecture that turns
@@ -132,27 +151,38 @@ const base = import.meta.env.BASE_URL;
         proposal with structured evidence behind it.
       </p>
 
+      <hr class="about-divider" />
+
       <h2 id="administration">Administration</h2>
 
-      <p>
-        <strong>Writing aims from evidence.</strong> The PI needs specific aims for a new
-        grant. She defines a research goal in the reactor. Six hypotheses generate from the
-        existing graph. A tournament runs to rank them. Three survive -- each with
-        mechanism, predictions, and preliminary data already identified from the lab's own
-        datasets. The debate transcripts document why these beat the alternatives.
-      </p>
-      <p>
-        <strong>Allocating resources.</strong> The lab has a slot for a new project. The PI
-        filters the leaderboard by hypotheses testable with existing data. Three candidates
-        surface with different cost profiles. The decision takes minutes. The evidence trail
-        is there for anyone to review.
-      </p>
-      <p>
-        <strong>New direction.</strong> The PI reads a paper that opens unexplored territory.
-        She defines a new goal. The graph already has twelve relevant claims and two projects
-        with transferable data. Three seed hypotheses generate from what the lab already
-        knows. The new direction starts with context, not from zero.
-      </p>
+      <div class="not-prose grid gap-4 mb-8">
+        <div class="p-5 rounded-lg border border-border bg-surface card-shadow">
+          <h3 class="font-display font-semibold text-text mb-2">Writing aims from evidence</h3>
+          <p class="text-sm text-text-muted leading-relaxed">
+            The PI needs specific aims for a new grant. She defines a research goal in the reactor.
+            Six hypotheses generate from the existing graph. A tournament runs to rank them. Three
+            survive -- each with mechanism, predictions, and preliminary data already identified from
+            the lab's own datasets. The debate transcripts document why these beat the alternatives.
+          </p>
+        </div>
+        <div class="p-5 rounded-lg border border-border bg-surface card-shadow">
+          <h3 class="font-display font-semibold text-text mb-2">Allocating resources</h3>
+          <p class="text-sm text-text-muted leading-relaxed">
+            The lab has a slot for a new project. The PI filters the leaderboard by hypotheses
+            testable with existing data. Three candidates surface with different cost profiles. The
+            decision takes minutes. The evidence trail is there for anyone to review.
+          </p>
+        </div>
+        <div class="p-5 rounded-lg border border-border bg-surface card-shadow">
+          <h3 class="font-display font-semibold text-text mb-2">New direction</h3>
+          <p class="text-sm text-text-muted leading-relaxed">
+            The PI reads a paper that opens unexplored territory. She defines a new goal. The graph
+            already has twelve relevant claims and two projects with transferable data. Three seed
+            hypotheses generate from what the lab already knows. The new direction starts with
+            context, not from zero.
+          </p>
+        </div>
+      </div>
 
       <h2 id="across-labs">Across labs</h2>
 
@@ -169,7 +199,7 @@ const base = import.meta.env.BASE_URL;
         first. The PIs decide whether to cross the bridge.
       </p>
 
-      <hr />
+      <hr class="about-divider" />
 
       <p class="text-text-muted italic">
         The reactor is running. The question is which ideas to put into it.
