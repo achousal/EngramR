@@ -54,6 +54,21 @@ function descFromSlug(slug: string): string {
   const doc = findDoc(slug);
   return doc?.data.description || "";
 }
+
+function readingTime(slug: string): string {
+  const doc = findDoc(slug);
+  if (!doc?.body) return "";
+  const words = doc.body.trim().split(/\s+/).length;
+  const minutes = Math.max(1, Math.ceil(words / 200));
+  return `${minutes} min read`;
+}
+
+// Build search data for client-side filtering
+const searchData = [...new Set(tiers.flatMap((t) => t.slugs))].map((slug) => ({
+  slug,
+  title: titleFromSlug(slug),
+  description: descFromSlug(slug),
+}));
 ---
 
 <Base title="Documentation -- EngramR">
@@ -61,13 +76,31 @@ function descFromSlug(slug: string): string {
   <div class="max-w-5xl mx-auto px-6 pt-20 pb-16">
     <div class="mb-12">
       <h1 class="text-3xl md:text-4xl font-bold font-display mb-4">Documentation</h1>
-      <p class="text-text-muted text-lg max-w-2xl">
+      <p class="text-text-muted text-lg max-w-2xl mb-6">
         Two ways in: follow the reading order to learn sequentially, or jump to what you need from the routing table.
       </p>
+
+      <!-- Search -->
+      <div class="relative max-w-md">
+        <svg class="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-text-muted pointer-events-none" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24" aria-hidden="true">
+          <path stroke-linecap="round" stroke-linejoin="round" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/>
+        </svg>
+        <input
+          type="search"
+          id="doc-search"
+          placeholder="Filter docs..."
+          class="w-full pl-10 pr-4 py-2.5 text-sm bg-surface border border-border rounded-lg text-text placeholder-text-muted focus:outline-none focus:border-accent-dim transition-colors"
+          autocomplete="off"
+        />
+      </div>
+    </div>
+
+    <div id="doc-no-results" class="hidden mb-8 text-text-muted text-sm">
+      No docs match your search.
     </div>
 
     <!-- Reading Order -->
-    <section class="mb-14">
+    <section class="mb-14 doc-section">
       <h2 class="text-xs font-semibold uppercase tracking-wider text-text-muted mb-6">
         Reading Order
       </h2>
@@ -100,7 +133,7 @@ function descFromSlug(slug: string): string {
     </section>
 
     <!-- Routing Table -->
-    <section class="mb-14">
+    <section class="mb-14 doc-section">
       <h2 class="text-xs font-semibold uppercase tracking-wider text-text-muted mb-6">
         I need to...
       </h2>
@@ -127,7 +160,7 @@ function descFromSlug(slug: string): string {
 
     <!-- Three tiers as card grids -->
     {tiers.map((tier) => (
-      <section class="mb-10">
+      <section class="mb-10 doc-tier-section">
         <h2 class="text-xs font-semibold uppercase tracking-wider text-text-muted mb-1">
           {tier.label}
         </h2>
@@ -136,11 +169,19 @@ function descFromSlug(slug: string): string {
           {tier.slugs.map((slug) => (
             <a
               href={`${base}docs/${slug}/`}
-              class="block p-5 rounded-lg border border-border bg-surface hover:border-accent-dim transition-colors no-underline group card-shadow card-shadow-hover"
+              class="doc-card block p-5 rounded-lg border border-border bg-surface hover:border-accent-dim transition-colors no-underline group card-shadow card-shadow-hover"
+              data-doc-slug={slug}
             >
-              <h3 class="font-display font-semibold text-text group-hover:text-accent transition-colors mb-2">
-                {titleFromSlug(slug)}
-              </h3>
+              <div class="flex items-start justify-between gap-2 mb-2">
+                <h3 class="font-display font-semibold text-text group-hover:text-accent transition-colors">
+                  {titleFromSlug(slug)}
+                </h3>
+                {readingTime(slug) && (
+                  <span class="text-xs text-text-muted whitespace-nowrap mt-0.5">
+                    {readingTime(slug)}
+                  </span>
+                )}
+              </div>
               {descFromSlug(slug) && (
                 <p class="text-sm text-text-muted leading-relaxed line-clamp-2">
                   {descFromSlug(slug)}
@@ -152,4 +193,45 @@ function descFromSlug(slug: string): string {
       </section>
     ))}
   </div>
+
+  <script define:vars={{ searchData }}>
+    document.addEventListener("DOMContentLoaded", () => {
+      const input = document.getElementById("doc-search");
+      const noResults = document.getElementById("doc-no-results");
+      if (!input || !noResults) return;
+
+      const cards = document.querySelectorAll(".doc-card");
+      const tierSections = document.querySelectorAll(".doc-tier-section");
+
+      input.addEventListener("input", () => {
+        const q = input.value.toLowerCase().trim();
+
+        if (!q) {
+          cards.forEach((c) => c.classList.remove("hidden"));
+          tierSections.forEach((s) => s.classList.remove("hidden"));
+          noResults.classList.add("hidden");
+          return;
+        }
+
+        let visibleCount = 0;
+        cards.forEach((card) => {
+          const slug = card.dataset.docSlug;
+          const entry = searchData.find((d) => d.slug === slug);
+          const haystack = entry
+            ? `${entry.title} ${entry.description}`.toLowerCase()
+            : "";
+          const match = haystack.includes(q);
+          card.classList.toggle("hidden", !match);
+          if (match) visibleCount++;
+        });
+
+        tierSections.forEach((section) => {
+          const hasVisible = section.querySelector(".doc-card:not(.hidden)");
+          section.classList.toggle("hidden", !hasVisible);
+        });
+
+        noResults.classList.toggle("hidden", visibleCount > 0);
+      });
+    });
+  </script>
 </Base>
