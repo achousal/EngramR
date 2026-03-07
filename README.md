@@ -47,28 +47,6 @@ Adoption is not a cliff. It is a gradient. Every observation is a valuable contr
 
 ---
 
-## The research cycle
-
-1. A paper lands in the inbox. `/reduce` extracts atomic claims with structured
-   metadata. `/reflect` links them to existing claims in the graph.
-
-2. Evidence density crosses a threshold. `/generate` proposes testable hypotheses
-   grounded in the accumulated claims, each with mechanism, predictions, and
-   falsification criteria.
-
-3. `/tournament` debates them pairwise. One hypothesis wins the most matches -- it
-   has stronger evidence support and more specific predictions. Elo ratings update.
-   Debate transcripts are stored.
-
-4. `/meta-review` synthesizes what made winners win. That feedback injects into the
-   next `/generate` and `/evolve` cycle. The reactor learns what good hypotheses
-   look like in its domain.
-
-5. The top hypothesis comes with a pre-specified analysis plan. `/experiment` logs
-   the run. Results feed back into the graph. The leaderboard updates.
-
----
-
 ## Getting started
 
 Install [Claude Code](https://docs.anthropic.com/en/docs/claude-code), clone the repo, and open it:
@@ -100,15 +78,7 @@ EngramR/
 
 ## Organizing your research
 
-EngramR works best when the vault mirrors your research process rather than acting as a filing cabinet. A few practices that make a real difference:
-
-**Always route through inbox/.** Drop sources in `inbox/`, never write claims to `notes/` directly. The pipeline (`inbox/ -> /reduce -> /reflect -> /verify -> notes/`) applies quality gates that catch schema errors, orphan notes, and missing provenance. 
-
-**One well-scoped goal per `/init` run.** Each research goal spawns its own orientation, methodology, confounder, and inversion claims. Goals registered in `self/goals.md` drive hypothesis generation -- a tightly scoped goal produces more specific, falsifiable hypotheses than a broad one.
-
-**Use projects/ for lab and infrastructure context.** Project nodes created via `/onboard` or `/project` hold your data inventory, HPC constraints, collaborators, and instrument capabilities. 
-
-**Let topic maps emerge.**  Create a topic map when five or more related claims accumulate without a navigation hub. 
+**Always route through inbox/.** Drop sources in `inbox/`. The `/ralph` pipeline (`inbox/ -> /reduce -> /reflect -> /reweave -> /verify -> notes/`) applies quality gates that catch schema errors, orphan notes, and missing provenance. 
 
 **Process before capturing more.** When `inbox/` holds more than ten items, pause intake and run `/ralph` or `/reduce` before adding more sources. A growing inbox with no processing is collector's fallacy -- the vault only grows in value when sources are reduced to connected claims.
 

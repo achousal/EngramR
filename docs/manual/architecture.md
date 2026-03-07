@@ -27,7 +27,7 @@ The vault is organized around three primitives:
 | ------------ | ---------------------------------------------------------------------------------------------------------------------------- |
 | **Scope**    | Domain boundaries -- research areas, epistemic stance, inclusion and exclusion criteria                                      |
 | **Contexts** | Three-space architecture: `self/` (identity, methodology, goals), `notes/` (atomic claims), `ops/` (config, queue, sessions) |
-| **Texts**    | Atomic claims -- single-insight notes titled as prose propositions, linked by wiki-link edges into a graph                   |
+| **Notes**    | Atomic claims -- single-insight notes titled as prose propositions, linked by wiki-link edges into a graph                   |
 
 Topic maps organize claim clusters into navigable neighborhoods -- attention
 hubs that make the graph browsable without search. Raw input enters through
