@@ -109,7 +109,7 @@ documentation with arguments and I/O details.
 | [Literature Search](docs/manual/literature.md) | Search backends and enrichment pipeline |
 | [Plot System](docs/manual/plotting.md) | Visual identity, stat tests, plot builders |
 | [Security](docs/manual/security.md) | Write validation, tamper detection, PII filtering |
-| [Integrations](docs/manual/integrations.md) | Slack, Obsidian, MCP servers, domain profiles |
+| [Integrations](docs/manual/integrations.md) | Slack, Obsidian, MCP servers, daemon, multi-vault setup |
 | [Administration](docs/manual/administration.md) | Daemon, hooks, decision engine, scripts |
 | [Inter-Lab Collaboration](docs/manual/inter-lab.md) | Federation and multi-vault setup |
 | [Querying](docs/manual/querying.md) | YAML frontmatter query patterns |
