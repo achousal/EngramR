@@ -76,35 +76,43 @@ const tabs = [
 
     <!-- Researcher panel (default) -->
     <div data-role-panel="researcher">
-      <!-- Prerequisites table -->
-      <div data-animate="fade-up" class="mb-12 overflow-x-auto">
-        <table class="w-full text-sm">
-          <thead>
-            <tr class="border-b border-border text-left">
-              <th class="pb-3 pr-4 font-display font-semibold text-text">Dependency</th>
-              <th class="pb-3 pr-4 font-display font-semibold text-text text-center">Required</th>
-              <th class="pb-3 font-display font-semibold text-text">Purpose</th>
-            </tr>
-          </thead>
-          <tbody>
-            {prerequisites.map((dep) => (
-              <tr class="border-b border-border/50">
-                <td class="py-3 pr-4">
-                  <a href={dep.url} class="text-link hover:text-text">{dep.name}</a>
-                </td>
-                <td class="py-3 pr-4 text-center">
-                  <span class={dep.required ? "text-success" : "text-text-muted"}>
-                    {dep.required ? "Yes" : "No"}
-                  </span>
-                </td>
-                <td class="py-3 text-text-muted">{dep.purpose}</td>
+      <!-- Prerequisites (collapsed) -->
+      <details data-animate="fade-up" class="mb-12 group border border-border rounded-lg overflow-hidden card-shadow">
+        <summary class="flex items-center justify-between px-6 py-4 cursor-pointer hover:bg-surface-bright transition-colors">
+          <span class="font-display font-semibold text-text">Prerequisites</span>
+          <svg class="w-5 h-5 text-text-muted transform transition-transform group-open:rotate-180" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M19 9l-7 7-7-7"/>
+          </svg>
+        </summary>
+        <div class="px-6 pb-4 overflow-x-auto">
+          <table class="w-full text-sm">
+            <thead>
+              <tr class="border-b border-border text-left">
+                <th class="pb-3 pr-4 font-display font-semibold text-text">Dependency</th>
+                <th class="pb-3 pr-4 font-display font-semibold text-text text-center">Required</th>
+                <th class="pb-3 font-display font-semibold text-text">Purpose</th>
               </tr>
-            ))}
-          </tbody>
-        </table>
-      </div>
+            </thead>
+            <tbody>
+              {prerequisites.map((dep) => (
+                <tr class="border-b border-border/50">
+                  <td class="py-3 pr-4">
+                    <a href={dep.url} class="text-link hover:text-text">{dep.name}</a>
+                  </td>
+                  <td class="py-3 pr-4 text-center">
+                    <span class={dep.required ? "text-success" : "text-text-muted"}>
+                      {dep.required ? "Yes" : "No"}
+                    </span>
+                  </td>
+                  <td class="py-3 text-text-muted">{dep.purpose}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      </details>
 
-      <!-- Setup steps -->
+      <!-- Setup steps with terminal frames -->
       <div class="space-y-6">
         {steps.map((step, i) => (
           <div data-animate="fade-up" class="flex gap-4">
@@ -113,7 +121,14 @@ const tabs = [
             </div>
             <div class="flex-1 min-w-0">
               <h3 class="font-display font-semibold mb-2">{step.title}</h3>
-              <pre class="bg-base border border-border rounded-lg px-4 py-3 text-sm text-link overflow-x-auto"><code>{step.code}</code></pre>
+              <div class="terminal-frame rounded-lg overflow-hidden border border-border">
+                <div class="terminal-titlebar flex items-center gap-1.5 px-3 py-2 bg-surface-bright border-b border-border">
+                  <span class="w-2.5 h-2.5 rounded-full bg-tension/60"></span>
+                  <span class="w-2.5 h-2.5 rounded-full bg-accent-dim/60"></span>
+                  <span class="w-2.5 h-2.5 rounded-full bg-success/60"></span>
+                </div>
+                <pre class="bg-base px-4 py-3 text-sm text-link overflow-x-auto"><code>{step.code}</code></pre>
+              </div>
               {step.note && (
                 <p class="mt-2 text-sm text-text-muted">{step.note}</p>
               )}
