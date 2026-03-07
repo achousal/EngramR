@@ -21,11 +21,17 @@ function isActive(href: string): boolean {
   aria-label="Main navigation"
 >
   <div class="max-w-6xl mx-auto px-6 flex items-center justify-between h-14">
-    <a href={base} class="font-display text-lg font-semibold text-text hover:text-text no-underline">
-      Engram<span class="text-accent">R</span>
-    </a>
+    <div class="flex items-center gap-2">
+      <a href={base} class="font-display text-lg font-semibold text-text hover:text-text no-underline">
+        Engram<span class="text-accent">R</span>
+      </a>
+      <span class="text-[0.625rem] font-mono font-medium text-accent-dim border border-accent-dim rounded-full px-1.5 py-0.5 leading-none">
+        v0.0.1
+      </span>
+    </div>
 
-    <div class="flex items-center gap-6">
+    {/* Desktop links */}
+    <div class="hidden md:flex items-center gap-6">
       {links.map((link) => (
         <a
           href={link.href}
@@ -51,5 +57,50 @@ function isActive(href: string): boolean {
         </svg>
       </a>
     </div>
+
+    {/* Mobile hamburger */}
+    <button
+      type="button"
+      id="mobile-menu-toggle"
+      class="md:hidden p-2 -mr-2 text-text-muted hover:text-text transition-colors"
+      aria-label="Toggle menu"
+      aria-expanded="false"
+    >
+      <svg class="w-5 h-5 hamburger-icon" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24" aria-hidden="true">
+        <path stroke-linecap="round" stroke-linejoin="round" d="M4 6h16M4 12h16M4 18h16"/>
+      </svg>
+      <svg class="w-5 h-5 close-icon hidden" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24" aria-hidden="true">
+        <path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12"/>
+      </svg>
+    </button>
+  </div>
+
+  {/* Mobile menu panel */}
+  <div id="mobile-menu" class="md:hidden hidden border-t border-border">
+    <div class="max-w-6xl mx-auto px-6 py-4 space-y-3">
+      {links.map((link) => (
+        <a
+          href={link.href}
+          class:list={[
+            "mobile-menu-link block text-sm font-medium transition-colors no-underline py-1",
+            isActive(link.href)
+              ? "text-accent"
+              : "text-text-muted hover:text-text",
+          ]}
+          aria-current={isActive(link.href) ? "page" : undefined}
+        >
+          {link.label}
+        </a>
+      ))}
+      <a
+        href="https://github.com/achousal/EngramR"
+        class="mobile-menu-link block text-sm font-medium text-text-muted hover:text-text transition-colors no-underline py-1"
+      >
+        GitHub
+      </a>
+    </div>
   </div>
 </nav>
+
+{/* Mobile menu backdrop */}
+<div id="mobile-menu-backdrop" class="fixed inset-0 z-30 bg-base/60 backdrop-blur-sm hidden md:hidden"></div>
