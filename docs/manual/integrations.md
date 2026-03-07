@@ -33,7 +33,7 @@ inbound message summaries.
 
 ### Interactive bot (slack_bot.py)
 
-A `slack_bolt` Socket Mode bot that provides two-way Claude-powered
+A `slack_bot` Socket Mode bot that provides two-way Claude-powered
 conversation grounded in vault context:
 
 - **Vault context** -- reads `self/identity.md`, `self/methodology.md`,

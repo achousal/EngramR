@@ -30,8 +30,7 @@ If you use Obsidian for vault browsing:
 
 1. Open Obsidian
 2. "Open folder as vault" > select your vault path
-3. (Optional) Install the **Local REST API** community plugin for MCP integration
-4. (Recommended) Install **Dataview** for dynamic queries
+3. Install the **Local REST API** community plugin for MCP integration
 
 ## Optional: Research daemon
 

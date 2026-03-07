@@ -18,6 +18,61 @@ Claude handles setup from here. You answer questions; it builds the infrastructu
 
 ---
 
+## Before Your First Session
+
+### Where EngramR lives
+
+EngramR is a standalone knowledge vault, it should live in a separate directory from your existing projects. Clone it wherever is convenient, working through EngramR is encouraged for project development, especially in planning phases.
+
+```bash
+git clone https://github.com/achousal/EngramR.git ~/EngramR
+cd ~/EngramR
+claude
+```
+
+Your existing project structure is untouched. When you run `/onboard ~/projects/MyLab/`, EngramR scans that directory and creates reference notes inside the vault -- nothing in your lab directory is written or moved. It creates a symlink at `_dev/{project-tag}` pointing to your project, then transclude your existing `CLAUDE.md` into the project note. Your files stay where they are; the vault references them.
+
+#### Minimal project `CLAUDE.md`
+
+This is the primary source the scan uses for project description, research question, data details, HPC paths, and conventions. Projects without one still onboard, but the project note will be shallower and the in-vault embed will not resolve until one is created.
+
+If your projects do not have one yet, a few lines is enough for a good onboard:
+
+```markdown
+# Project Name
+
+## Overview
+What this project studies, what question it is trying to answer, and what the goal is.
+
+## Data / Materials
+What you are working with -- samples, datasets, cohorts, specimens, records.
+Include approximate size (N), type, and where it lives (path, biobank, repository, etc.).
+
+## Methods
+How you study it -- lab techniques, instruments, computational tools, analysis approaches.
+Whatever is most relevant to the project's identity.
+```
+
+You do not need to fill every section -- even just an Overview paragraph gives the scan enough to populate the project note and research goals correctly.
+### What to bring to `/onboard`
+
+- **The path to your lab directory** (e.g., `~/projects/MyLab/`). The scan reads your existing project folders.
+- **A `CLAUDE.md` with project descriptions in each .** 
+- **Research directions.** Even informal descriptions are fine -- the interview will refine them into structured goals.
+### What to bring to `/init` (after `/onboard`)
+
+- **3-5 key papers per research area.** PDFs or markdown preferred. These seed your first knowledge claims. Start with papers that represent your current thinking, not an aspirational reading list.
+
+### What not to do
+
+- **Do not dump your entire reference library into `inbox/`** through it, we processes material thoroughly. To cover ground, process through /literature for abstract centered scans. One well-processed paper is worth ten unprocessed ones. Add more as you work. 
+
+### The right mental model
+
+EngramR is a processing system. Its value comes from the rate at which raw material becomes connected knowledge (there isn't much benefit to storing 10 papers with overlapping claims). Start with a focused set, process it thoroughly, and expand from there.
+
+---
+
 ## Your First Session
 
 ### Step 1: Onboard your lab

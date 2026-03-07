@@ -735,6 +735,45 @@ Next steps:
   {if queue empty}: All tasks processed
 ```
 
+**First-Queue-Clear Milestone (show once):**
+
+After printing the queue state, if `pending == 0`, check for the flag file:
+
+```bash
+test -f ops/.queue-first-clear && echo "seen" || echo "new"
+```
+
+If `new` (flag does not exist):
+
+1. Print the milestone tip block:
+
+```
+--=={ vault advisor }==--
+
+You cleared your first queue backlog. The pipeline ran end-to-end.
+
+What you have now:
+  - Atomic claims in notes/ extracted and connected from your sources
+  - Topic maps linking related claims across the graph
+  - Verified notes with schema and link health checked
+
+Recommended next steps:
+  /health          -- full vault health scan (schema, orphans, link integrity)
+  /next            -- surface the highest-value action right now
+  /reflect         -- find cross-batch connections you may have missed
+  /reweave         -- backward pass: older notes updated with new context
+  /generate        -- produce new hypotheses grounded in your claims
+  /stats           -- see vault growth and graph metrics
+```
+
+2. Create the flag file so this tip is not shown again:
+
+```bash
+touch ops/.queue-first-clear
+```
+
+If `seen` (flag exists), skip the milestone block entirely.
+
 **Verification:** The "Subagents spawned" count MUST equal "Tasks processed." If it does not, the lead executed tasks inline — this is a process violation. Report it as an error.
 
 If `--handoff` flag was set, also output:
