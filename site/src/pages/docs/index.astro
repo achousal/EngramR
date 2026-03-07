@@ -7,23 +7,37 @@ import "@styles/global.css";
 const docs = await getCollection("docs");
 const base = import.meta.env.BASE_URL;
 
-const groups = [
+const tiers = [
   {
-    label: "Getting Started",
-    slugs: ["getting-started", "setup-guide"],
+    label: "Core",
+    description:
+      "The 5 pages everyone reads. They form a dependency chain -- start at Getting Started and work through.",
+    slugs: ["getting-started", "skills", "workflows", "architecture", "configuration"],
   },
   {
     label: "Reference",
-    slugs: ["configuration", "workflows", "architecture", "querying"],
-  },
-  {
-    label: "Guides",
-    slugs: ["skills", "meta-skills", "literature", "plotting", "inter-lab"],
+    description:
+      "Standalone deep-dives. No reading order between them -- pull one off the shelf when you need it.",
+    slugs: ["literature", "plotting", "querying", "meta-skills"],
   },
   {
     label: "Operations",
-    slugs: ["administration", "integrations", "security", "troubleshooting"],
+    description:
+      "Running the system in production. These assume you have read the core tier.",
+    slugs: ["integrations", "administration", "security", "inter-lab", "troubleshooting"],
   },
+];
+
+const routes = [
+  { need: "Search PubMed, arXiv, Semantic Scholar", slug: "literature" },
+  { need: "Publication-quality figures", slug: "plotting" },
+  { need: "Slack, Obsidian, MCP servers, daemon", slug: "integrations" },
+  { need: "Autonomous daemon, hooks, scripts", slug: "administration" },
+  { need: "Multi-lab federation", slug: "inter-lab" },
+  { need: "Write validation, tamper detection, PII", slug: "security" },
+  { need: "ripgrep query patterns", slug: "querying" },
+  { need: "/ask, /architect, /rethink, /remember", slug: "meta-skills" },
+  { need: "Diagnosing problems", slug: "troubleshooting" },
 ];
 
 function findDoc(slug: string) {
@@ -47,18 +61,79 @@ function descFromSlug(slug: string): string {
   <div class="max-w-5xl mx-auto px-6 pt-20 pb-16">
     <div class="mb-12">
       <h1 class="text-3xl md:text-4xl font-bold font-display mb-4">Documentation</h1>
-      <p class="text-text-muted text-lg">
-        Everything you need to run your research reactor.
+      <p class="text-text-muted text-lg max-w-2xl">
+        Two ways in: follow the reading order to learn sequentially, or jump to what you need from the routing table.
       </p>
     </div>
 
-    {groups.map((group) => (
-      <div class="mb-10">
-        <h2 class="text-xs font-semibold uppercase tracking-wider text-text-muted mb-4">
-          {group.label}
+    <!-- Reading Order -->
+    <section class="mb-14">
+      <h2 class="text-xs font-semibold uppercase tracking-wider text-text-muted mb-6">
+        Reading Order
+      </h2>
+      <div class="pl-4 border-l-2 border-border space-y-2 font-mono text-sm text-text-muted leading-relaxed">
+        <p>
+          <a href={`${base}docs/getting-started/`} class="text-text hover:text-accent no-underline font-semibold">Getting Started</a>
+          <span class="text-text-muted"> -- first session, claims, session rhythm</span>
+        </p>
+        <div class="pl-6 space-y-2">
+          <p>
+            <a href={`${base}docs/skills/`} class="text-text hover:text-accent no-underline font-semibold">Skills Reference</a>
+            <span class="text-text-muted"> -- command dictionary</span>
+          </p>
+          <div class="pl-6">
+            <p>
+              <a href={`${base}docs/workflows/`} class="text-text hover:text-accent no-underline font-semibold">Workflows</a>
+              <span class="text-text-muted"> -- how commands compose</span>
+            </p>
+          </div>
+          <p>
+            <a href={`${base}docs/architecture/`} class="text-text hover:text-accent no-underline font-semibold">Architecture</a>
+            <span class="text-text-muted"> -- why the system is shaped this way</span>
+          </p>
+          <p>
+            <a href={`${base}docs/configuration/`} class="text-text hover:text-accent no-underline font-semibold">Configuration</a>
+            <span class="text-text-muted"> -- how to tune it</span>
+          </p>
+        </div>
+      </div>
+    </section>
+
+    <!-- Routing Table -->
+    <section class="mb-14">
+      <h2 class="text-xs font-semibold uppercase tracking-wider text-text-muted mb-6">
+        I need to...
+      </h2>
+      <div class="overflow-x-auto">
+        <table class="w-full text-sm border-collapse">
+          <tbody>
+            {routes.map((route) => (
+              <tr class="border-b border-border">
+                <td class="py-2.5 pr-4 text-text-muted">{route.need}</td>
+                <td class="py-2.5">
+                  <a
+                    href={`${base}docs/${route.slug}/`}
+                    class="text-link hover:text-text no-underline font-medium"
+                  >
+                    {titleFromSlug(route.slug)}
+                  </a>
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+    </section>
+
+    <!-- Three tiers as card grids -->
+    {tiers.map((tier) => (
+      <section class="mb-10">
+        <h2 class="text-xs font-semibold uppercase tracking-wider text-text-muted mb-1">
+          {tier.label}
         </h2>
+        <p class="text-sm text-text-muted mb-4">{tier.description}</p>
         <div class="grid sm:grid-cols-2 lg:grid-cols-3 gap-4">
-          {group.slugs.map((slug) => (
+          {tier.slugs.map((slug) => (
             <a
               href={`${base}docs/${slug}/`}
               class="block p-5 rounded-lg border border-border bg-surface hover:border-accent-dim transition-colors no-underline group card-shadow card-shadow-hover"
@@ -74,7 +149,7 @@ function descFromSlug(slug: string): string {
             </a>
           ))}
         </div>
-      </div>
+      </section>
     ))}
   </div>
 </Base>

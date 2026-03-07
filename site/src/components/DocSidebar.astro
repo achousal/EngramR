@@ -4,37 +4,31 @@ const currentPath = Astro.url.pathname;
 
 const groups = [
   {
-    label: "Getting Started",
+    label: "Core",
     items: [
       { title: "Getting Started", slug: "getting-started" },
-      { title: "Setup Guide", slug: "setup-guide" },
+      { title: "Skills Reference", slug: "skills" },
+      { title: "Workflows", slug: "workflows" },
+      { title: "Architecture", slug: "architecture" },
+      { title: "Configuration", slug: "configuration" },
     ],
   },
   {
     label: "Reference",
     items: [
-      { title: "Configuration", slug: "configuration" },
-      { title: "Workflows", slug: "workflows" },
-      { title: "Architecture", slug: "architecture" },
-      { title: "Querying", slug: "querying" },
-    ],
-  },
-  {
-    label: "Guides",
-    items: [
-      { title: "Skills Reference", slug: "skills" },
-      { title: "Meta-Skills", slug: "meta-skills" },
       { title: "Literature Search", slug: "literature" },
-      { title: "Plotting", slug: "plotting" },
-      { title: "Inter-Lab", slug: "inter-lab" },
+      { title: "Plot System", slug: "plotting" },
+      { title: "Querying", slug: "querying" },
+      { title: "Meta-Skills", slug: "meta-skills" },
     ],
   },
   {
     label: "Operations",
     items: [
-      { title: "Administration", slug: "administration" },
       { title: "Integrations", slug: "integrations" },
+      { title: "Administration", slug: "administration" },
       { title: "Security", slug: "security" },
+      { title: "Inter-Lab", slug: "inter-lab" },
       { title: "Troubleshooting", slug: "troubleshooting" },
     ],
   },
