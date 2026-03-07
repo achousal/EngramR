@@ -13,28 +13,6 @@ Read the [vision document](docs/EngramR.md) for the design philosophy.
 
 ---
 
-## The research cycle
-
-1. A paper lands in the inbox. `/reduce` extracts atomic claims with structured
-   metadata. `/reflect` links them to existing claims in the graph.
-
-2. Evidence density crosses a threshold. `/generate` proposes testable hypotheses
-   grounded in the accumulated claims, each with mechanism, predictions, and
-   falsification criteria.
-
-3. `/tournament` debates them pairwise. One hypothesis wins the most matches -- it
-   has stronger evidence support and more specific predictions. Elo ratings update.
-   Debate transcripts are stored.
-
-4. `/meta-review` synthesizes what made winners win. That feedback injects into the
-   next `/generate` and `/evolve` cycle. The reactor learns what good hypotheses
-   look like in its domain.
-
-5. The top hypothesis comes with a pre-specified analysis plan. `/experiment` logs
-   the run. Results feed back into the graph. The leaderboard updates.
-
----
-
 ## Architecture
 
 EngramR combines a **knowledge layer** that extracts, connects, and maintains
@@ -65,10 +43,29 @@ what they actually have -- datasets, instruments, domain-specific resources,
 constraints -- and the system ranks hypotheses not just by scientific merit
 but by what the lab can realistically act on.
 
-Adoption is not a cliff. It is a gradient. Every observation is a valuable contribution. Browse the leaderboard and you understand the teams's priorities. Run an analysis and feed back results. The deeper the team engages, the more the
-reactor gives back.
+Adoption is not a cliff. It is a gradient. Every observation is a valuable contribution. Browse the leaderboard or use `/next` to understand priorities. Run an analysis and feed back results. The deeper the team engages, the more the reactor gives back.
 
 ---
+
+## The research cycle
+
+1. A paper lands in the inbox. `/reduce` extracts atomic claims with structured
+   metadata. `/reflect` links them to existing claims in the graph.
+
+2. Evidence density crosses a threshold. `/generate` proposes testable hypotheses
+   grounded in the accumulated claims, each with mechanism, predictions, and
+   falsification criteria.
+
+3. `/tournament` debates them pairwise. One hypothesis wins the most matches -- it
+   has stronger evidence support and more specific predictions. Elo ratings update.
+   Debate transcripts are stored.
+
+4. `/meta-review` synthesizes what made winners win. That feedback injects into the
+   next `/generate` and `/evolve` cycle. The reactor learns what good hypotheses
+   look like in its domain.
+
+5. The top hypothesis comes with a pre-specified analysis plan. `/experiment` logs
+   the run. Results feed back into the graph. The leaderboard updates.
 
 ## Getting started
 
