@@ -13,6 +13,30 @@ interface Props {
 }
 
 const { title, description, headings } = Astro.props;
+const base = import.meta.env.BASE_URL;
+const currentPath = Astro.url.pathname;
+
+/* All pages in reading order across tiers. Used for prev/next links. */
+const allPages = [
+  { title: "Getting Started", slug: "getting-started" },
+  { title: "Skills Reference", slug: "skills" },
+  { title: "Workflows", slug: "workflows" },
+  { title: "Architecture", slug: "architecture" },
+  { title: "Configuration", slug: "configuration" },
+  { title: "Literature Search", slug: "literature" },
+  { title: "Plot System", slug: "plotting" },
+  { title: "Querying", slug: "querying" },
+  { title: "Meta-Skills", slug: "meta-skills" },
+  { title: "Integrations", slug: "integrations" },
+  { title: "Administration", slug: "administration" },
+  { title: "Security", slug: "security" },
+  { title: "Inter-Lab", slug: "inter-lab" },
+  { title: "Troubleshooting", slug: "troubleshooting" },
+];
+
+const currentIndex = allPages.findIndex((p) => currentPath.includes(`/docs/${p.slug}`));
+const prev = currentIndex > 0 ? allPages[currentIndex - 1] : null;
+const next = currentIndex >= 0 && currentIndex < allPages.length - 1 ? allPages[currentIndex + 1] : null;
 ---
 
 <Base title={`${title} -- EngramR Docs`} description={description}>
@@ -24,6 +48,27 @@ const { title, description, headings } = Astro.props;
       <div class="doc-prose">
         <slot />
       </div>
+
+      {(prev || next) && (
+        <nav class="doc-prev-next" aria-label="Page navigation">
+          <div>
+            {prev && (
+              <a href={`${base}docs/${prev.slug}/`} class="doc-prev-next-link">
+                <span class="doc-prev-next-label">Previous</span>
+                <span class="doc-prev-next-title">{prev.title}</span>
+              </a>
+            )}
+          </div>
+          <div>
+            {next && (
+              <a href={`${base}docs/${next.slug}/`} class="doc-prev-next-link doc-prev-next-right">
+                <span class="doc-prev-next-label">Next</span>
+                <span class="doc-prev-next-title">{next.title}</span>
+              </a>
+            )}
+          </div>
+        </nav>
+      )}
     </article>
     <DocToc headings={headings} />
   </div>
