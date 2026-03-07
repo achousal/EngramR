@@ -1,0 +1,66 @@
+---
+const base = import.meta.env.BASE_URL;
+
+const concepts = [
+  {
+    term: "Atomic Claims",
+    definition: "One insight per file, titled as a prose proposition. The fundamental unit of knowledge.",
+    icon: '<path d="M9 12h6m-3-3v6m-7 4h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"/>',
+    href: `${base}docs/getting-started/`,
+  },
+  {
+    term: "Wiki Links",
+    definition: "Connections between claims form a knowledge graph. Every link explains the relationship.",
+    icon: '<path d="M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101m-.758-4.899a4 4 0 005.656 0l4-4a4 4 0 00-5.656-5.656l-1.1 1.1"/>',
+    href: `${base}docs/architecture/`,
+  },
+  {
+    term: "Topic Maps",
+    definition: "Navigation hubs that organize claims by theme. Created when 5+ related claims accumulate.",
+    icon: '<path d="M9 20l-5.447-2.724A1 1 0 013 16.382V5.618a1 1 0 011.447-.894L9 7m0 13l6-3m-6 3V7m6 10l4.553 2.276A1 1 0 0021 18.382V7.618a1 1 0 00-.553-.894L15 4m0 13V4m0 0L9 7"/>',
+    href: `${base}docs/workflows/`,
+  },
+  {
+    term: "Hypothesis Tournaments",
+    definition: "Pairwise scientific debates rank hypotheses on evidence, specificity, and testability.",
+    icon: '<path d="M3 6l3 1m0 0l-3 9a5.002 5.002 0 006.001 0M6 7l3 9M6 7l6-2m6 2l3-1m-3 1l-3 9a5.002 5.002 0 006.001 0M18 7l3 9m-3-9l-6-2m0-2v2m0 16V5m0 16H9m3 0h3"/>',
+    href: `${base}docs/skills/`,
+  },
+  {
+    term: "Elo Rankings",
+    definition: "Tournament results update a leaderboard. Top-ranked hypotheses surface for experiments.",
+    icon: '<path d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6"/>',
+    href: `${base}docs/skills/`,
+  },
+  {
+    term: "Provenance Chain",
+    definition: "Every claim traces to its source. Query to inbox to claim to hypothesis -- fully auditable.",
+    icon: '<path d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4"/>',
+    href: `${base}docs/architecture/`,
+  },
+];
+---
+
+<section class="py-20 md:py-24">
+  <div class="max-w-5xl mx-auto px-6">
+    <div class="grid sm:grid-cols-2 md:grid-cols-3 gap-5">
+      {concepts.map((c) => (
+        <a
+          href={c.href}
+          data-animate="fade-up"
+          class="group block p-5 rounded-lg border border-border bg-surface hover:border-accent-dim transition-colors no-underline card-shadow card-shadow-hover"
+        >
+          <div class="flex items-center gap-3 mb-3">
+            <svg class="w-5 h-5 text-accent-dim shrink-0" fill="none" stroke="currentColor" stroke-width="1.5" viewBox="0 0 24 24" aria-hidden="true">
+              <Fragment set:html={c.icon} />
+            </svg>
+            <h3 class="font-display font-semibold text-text group-hover:text-accent transition-colors">
+              {c.term}
+            </h3>
+          </div>
+          <p class="text-sm text-text-muted leading-relaxed">{c.definition}</p>
+        </a>
+      ))}
+    </div>
+  </div>
+</section>
