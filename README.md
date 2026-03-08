@@ -13,15 +13,6 @@ Read the [vision document](docs/EngramR.md) for the design philosophy.
 
 ---
 
-## Architecture
-
-EngramR combines a **knowledge layer** (claim extraction, connection-finding,
-quality gates) and a **hypothesis layer** (generation, pairwise debate, Elo
-ranking, meta-review feedback). See [Architecture](docs/manual/architecture.md)
-for the full deep-dive.
-
----
-
 ## Getting started
 
 Install [Claude Code](https://docs.anthropic.com/en/docs/claude-code), clone the repo, and open it:
@@ -35,6 +26,13 @@ claude
 Claude guides you through the rest. See [Getting Started](docs/manual/getting-started.md) for the full first-session walkthrough.
 
 ---
+
+## Architecture
+
+EngramR combines a **knowledge layer** (claim extraction, connection-finding,
+quality gates) and a **hypothesis layer** (generation, pairwise debate, Elo
+ranking, meta-review feedback). See [Architecture](docs/manual/architecture.md)
+for the full deep-dive.
 
 ## Project structure
 
